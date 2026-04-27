@@ -31,11 +31,22 @@ public class PasskeyService(
             DisplayName = displayName
         };
 
+        // ResidentKey = Required is non-negotiable: the login flow uses
+        // AllowedCredentials = [] (a usernameless / discoverable-credential
+        // flow), so a non-discoverable credential created here would be
+        // unreachable at sign-in time — the browser wouldn't even surface
+        // it. The library's default is Preferred, which lets some
+        // authenticators (notably external hardware keys) decide to skip
+        // resident storage. Pin it.
         var options = fido2.RequestNewCredential(new RequestNewCredentialParams
         {
             User = user,
             ExcludeCredentials = [],
-            AuthenticatorSelection = AuthenticatorSelection.Default,
+            AuthenticatorSelection = new AuthenticatorSelection
+            {
+                ResidentKey = ResidentKeyRequirement.Required,
+                UserVerification = UserVerificationRequirement.Preferred,
+            },
             AttestationPreference = AttestationConveyancePreference.None
         });
 
