@@ -16,6 +16,10 @@ public class ClientSeeder(
     /// <c>pishro-auth.admin.&lt;domain&gt;.&lt;action&gt;</c>. New admin endpoints
     /// must add their own slug here rather than reusing a coarse umbrella.
     /// </summary>
+    public const string AdminUsersCreateScope = "pishro-auth.admin.users.create";
+
+    public const string AdminUsersReadScope = "pishro-auth.admin.users.read";
+
     public const string AdminUsersDeleteScope = "pishro-auth.admin.users.delete";
 
     public async Task SeedAsync(CancellationToken ct = default)
@@ -40,6 +44,26 @@ public class ClientSeeder(
                 Name = "vetting_status",
                 DisplayName = "Vetting status",
                 Description = "HRMS vetting lifecycle state"
+            }, ct);
+        }
+
+        if (await scopes.FindByNameAsync(AdminUsersCreateScope, ct) is null)
+        {
+            await scopes.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = AdminUsersCreateScope,
+                DisplayName = "Admin: create users",
+                Description = "Permission to provision a User row via /api/admin/users (no credentials yet — used for break-glass and invite handoff flows).",
+            }, ct);
+        }
+
+        if (await scopes.FindByNameAsync(AdminUsersReadScope, ct) is null)
+        {
+            await scopes.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = AdminUsersReadScope,
+                DisplayName = "Admin: read user status",
+                Description = "Permission to read user status (passkey-registered, etc.) via /api/admin/users/{id}/status.",
             }, ct);
         }
 
@@ -152,13 +176,50 @@ public class ClientSeeder(
     private async Task SeedHrmsAdminClientAsync(CancellationToken ct)
     {
         const string clientId = "hrms-admin";
+
+        // Permissions list is rebuilt from current source on every boot so
+        // adding a new fine-grained scope (e.g. pishro-auth.admin.users.read)
+        // takes effect after a restart without DB surgery. The ClientSecret
+        // is intentionally NOT included in the update path — see below.
+        var permissions = new HashSet<string>
+        {
+            OpenIddictConstants.Permissions.Endpoints.Token,
+            OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+            OpenIddictConstants.Permissions.Prefixes.Scope + AdminUsersCreateScope,
+            OpenIddictConstants.Permissions.Prefixes.Scope + AdminUsersReadScope,
+            OpenIddictConstants.Permissions.Prefixes.Scope + AdminUsersDeleteScope,
+        };
+
         var existing = await manager.FindByClientIdAsync(clientId, ct);
         if (existing is not null)
         {
-            logger.LogInformation(
-                "OIDC client '{ClientId}' already exists; secret unchanged. " +
-                "To rotate, delete the openiddict_applications row and restart.",
-                clientId);
+            // Sync permissions only — leave ClientSecret untouched. OpenIddict
+            // hashes secrets at create-time; there is no plaintext to round-
+            // trip into UpdateAsync, and rotating here would silently break
+            // every HRMS deploy that still has the old secret in env.
+            var current = await manager.GetPermissionsAsync(existing, ct);
+            if (!current.OrderBy(s => s).SequenceEqual(permissions.OrderBy(s => s)))
+            {
+                var descriptor = new OpenIddictApplicationDescriptor();
+                await manager.PopulateAsync(descriptor, existing, ct);
+                descriptor.Permissions.Clear();
+                foreach (var p in permissions) descriptor.Permissions.Add(p);
+                // Suppress secret rewrite — descriptor.ClientSecret is null
+                // here, but PopulateAsync may have copied a placeholder. We
+                // explicitly null it before UpdateAsync so OpenIddict's
+                // ApplicationManager keeps the existing hashed secret.
+                descriptor.ClientSecret = null;
+                await manager.UpdateAsync(existing, descriptor, ct);
+                logger.LogInformation(
+                    "OIDC client '{ClientId}' permissions synced; secret unchanged.",
+                    clientId);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "OIDC client '{ClientId}' permissions already in sync; nothing to do.",
+                    clientId);
+            }
             return;
         }
 
@@ -171,21 +232,16 @@ public class ClientSeeder(
         var generated = !string.IsNullOrWhiteSpace(bootstrap);
         var secret = generated ? bootstrap! : GenerateSecret();
 
-        var descriptor = new OpenIddictApplicationDescriptor
+        var newDescriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = clientId,
             DisplayName = "HRMS Identity (admin S2S)",
             ClientType = OpenIddictConstants.ClientTypes.Confidential,
             ClientSecret = secret,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                OpenIddictConstants.Permissions.Prefixes.Scope + AdminUsersDeleteScope,
-            },
         };
+        foreach (var p in permissions) newDescriptor.Permissions.Add(p);
 
-        await manager.CreateAsync(descriptor, ct);
+        await manager.CreateAsync(newDescriptor, ct);
 
         // ONE-TIME logging of plaintext secret. Wrapped in obvious markers so
         // the operator can grep it out of the boot logs and paste it into the
