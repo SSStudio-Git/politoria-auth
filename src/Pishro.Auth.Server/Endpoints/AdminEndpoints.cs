@@ -3,21 +3,23 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
+using Pishro.Auth.Domain.Entities;
 using Pishro.Auth.Infrastructure.Persistence;
 using Pishro.Auth.Infrastructure.Seed;
 
 namespace Pishro.Auth.Server.Endpoints;
 
 /// <summary>
-/// Service-to-service administrative endpoints. Called by the HRMS Identity
-/// service when a member is hard-deleted so the user + their passkey
-/// credentials are removed from the IdP too.
+/// Service-to-service administrative endpoints. Called by HRMS Identity for
+/// member-lifecycle operations that need to land in the IdP atomically:
+/// creating a User row before a passkey is bound (break-glass + invite
+/// handoff), polling whether the passkey has been registered, and cascading
+/// hard-deletes.
 ///
 /// Auth: OAuth2 client_credentials bearer tokens scoped to the matching
 /// fine-grained <c>pishro-auth.admin.&lt;domain&gt;.&lt;action&gt;</c> scope.
-/// During the cutover from the legacy <c>X-Admin-Key</c> header, both auth
-/// methods are accepted; the header path will be removed in PR 3 once HRMS
-/// has been verified on the bearer flow in production.
+/// During the cutover from the legacy <c>X-Admin-Key</c> header, the
+/// delete endpoint also accepts the header; PR 3 removes that fallback.
 /// </summary>
 public static class AdminEndpoints
 {
@@ -25,6 +27,106 @@ public static class AdminEndpoints
     {
         var group = app.MapGroup("/api/admin");
 
+        // POST /api/admin/users — pre-provision a User row with admin-supplied
+        // identity data (no credentials yet). The caller (HRMS break-glass
+        // flow, Identity invite-handoff flow) then signs an InviteHandoff
+        // token carrying this Id and redirects the new member's browser to
+        // /invite/register.html where the existing WebAuthn registration
+        // ceremony binds the passkey.
+        group.MapPost("/users", async (
+            HttpContext httpContext,
+            CreateUserRequest request,
+            AuthDbContext db,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, ClientSeeder.AdminUsersCreateScope);
+            if (auth is not null) return auth;
+
+            var logger = loggerFactory.CreateLogger("AdminEndpoints");
+
+            if (string.IsNullOrWhiteSpace(request.DisplayName))
+                return Results.BadRequest(new { error = "displayName is required" });
+
+            // Idempotency: if the caller pre-supplied an Id and that User
+            // already exists, return the existing row. Otherwise create.
+            User? user = null;
+            if (request.Id is { } prebuiltId)
+            {
+                user = await db.Users.FirstOrDefaultAsync(u => u.Id == prebuiltId, ct);
+            }
+
+            if (user is null)
+            {
+                user = User.Create(request.DisplayName);
+                if (request.Id is { } id)
+                {
+                    typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(user, id);
+                }
+                if (request.Nickname is not null || request.Email is not null ||
+                    request.Phone is not null || request.FirstName is not null ||
+                    request.LastName is not null)
+                {
+                    user.Update(
+                        nickname: request.Nickname,
+                        firstName: request.FirstName,
+                        lastName: request.LastName,
+                        email: request.Email,
+                        phone: request.Phone);
+                }
+                db.Users.Add(user);
+                await db.SaveChangesAsync(ct);
+                logger.LogInformation("Admin-created user {UserId} (displayName={DisplayName})", user.Id, user.DisplayName);
+            }
+            else
+            {
+                logger.LogInformation("Admin-create idempotent hit on existing user {UserId}", user.Id);
+            }
+
+            return Results.Ok(new
+            {
+                userId = user.Id,
+                displayName = user.DisplayName,
+                created = true,
+            });
+        }).WithName("AdminCreateUser");
+
+        // GET /api/admin/users/{userId}/status — used by HRMS during the
+        // break-glass flow to poll until the new member has bound a passkey.
+        // Returns 404 if the User row doesn't exist; otherwise reports
+        // whether at least one active PasskeyCredential is on file.
+        group.MapGet("/users/{userId:guid}/status", async (
+            HttpContext httpContext,
+            Guid userId,
+            AuthDbContext db,
+            CancellationToken ct) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, ClientSeeder.AdminUsersReadScope);
+            if (auth is not null) return auth;
+
+            var user = await db.Users
+                .Where(u => u.Id == userId)
+                .Select(u => new { u.Id, u.DisplayName, u.IsActive })
+                .FirstOrDefaultAsync(ct);
+            if (user is null) return Results.NotFound();
+
+            var firstPasskeyAt = await db.PasskeyCredentials
+                .Where(p => p.UserId == userId && p.IsActive)
+                .OrderBy(p => p.CreatedAt)
+                .Select(p => (DateTimeOffset?)p.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            return Results.Ok(new
+            {
+                userId = user.Id,
+                isActive = user.IsActive,
+                passkeyRegistered = firstPasskeyAt.HasValue,
+                passkeyRegisteredAt = firstPasskeyAt,
+            });
+        }).WithName("AdminGetUserStatus");
+
+        // DELETE /api/admin/users/{userId} — cascade hard-delete from HRMS.
+        // Accepts bearer or legacy X-Admin-Key (PR 3 removes the header path).
         group.MapDelete("/users/{userId:guid}", async (
             HttpContext httpContext,
             Guid userId,
@@ -50,9 +152,10 @@ public static class AdminEndpoints
     }
 
     /// <summary>
-    /// Try the bearer path first; on miss, fall back to the legacy header.
-    /// Returns null when authorized; otherwise an IResult to short-circuit
-    /// the endpoint with 401 / 403 / 503.
+    /// Try the bearer path first; on miss, fall back to the legacy header
+    /// (delete endpoint only — create + status require bearer because they
+    /// post-date the cutover). Returns null when authorized; otherwise an
+    /// IResult to short-circuit with 401 / 403 / 503.
     /// </summary>
     private static async Task<IResult?> AuthorizeAsync(HttpContext httpContext, string requiredScope)
     {
@@ -75,6 +178,14 @@ public static class AdminEndpoints
 
             httpContext.User = result.Principal;
             return null;
+        }
+
+        // Legacy header path is only honoured for the delete scope. New
+        // endpoints (create, status) require bearer — no transitional
+        // shared-secret coverage.
+        if (requiredScope != ClientSeeder.AdminUsersDeleteScope)
+        {
+            return Results.Unauthorized();
         }
 
         return AuthorizeWithLegacyHeader(httpContext);
@@ -125,4 +236,18 @@ public static class AdminEndpoints
         }
         return false;
     }
+
+    /// <summary>
+    /// Body for POST /api/admin/users. <see cref="Id"/> is optional; supply
+    /// it to make the call idempotent under retry (HRMS pre-allocates the
+    /// IdentityId so its DB and pishro-auth's stay aligned).
+    /// </summary>
+    public sealed record CreateUserRequest(
+        string DisplayName,
+        Guid? Id = null,
+        string? Nickname = null,
+        string? FirstName = null,
+        string? LastName = null,
+        string? Email = null,
+        string? Phone = null);
 }

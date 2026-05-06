@@ -41,6 +41,8 @@ builder.Services.AddOpenIddict()
 
         options.RegisterScopes(
             "openid", "profile", "email", "phone", "roles", "vetting_status",
+            "pishro-auth.admin.users.create",
+            "pishro-auth.admin.users.read",
             "pishro-auth.admin.users.delete");
 
         // Dev signing credentials (replace with proper certs in production)
