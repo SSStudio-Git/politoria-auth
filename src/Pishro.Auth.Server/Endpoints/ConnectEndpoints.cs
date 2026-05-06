@@ -144,6 +144,32 @@ public static class ConnectEndpoints
             return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
+        if (request.IsClientCredentialsGrantType())
+        {
+            // Service-to-service caller (today: hrms-admin). Subject is the
+            // client itself; the access token carries the requested scopes,
+            // and resource servers gate endpoints on those scope values.
+            var clientId = request.ClientId
+                ?? throw new InvalidOperationException("The client_id is missing.");
+
+            var identity = new ClaimsIdentity(
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                nameType: OpenIddictConstants.Claims.Name,
+                roleType: OpenIddictConstants.Claims.Role);
+            identity.AddClaim(new Claim(OpenIddictConstants.Claims.Subject, clientId));
+            identity.AddClaim(new Claim(OpenIddictConstants.Claims.Name, clientId));
+
+            var principal = new ClaimsPrincipal(identity);
+            principal.SetScopes(request.GetScopes());
+
+            foreach (var claim in principal.Claims)
+            {
+                claim.SetDestinations(GetDestinations(claim, principal));
+            }
+
+            return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
 

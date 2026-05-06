@@ -33,7 +33,15 @@ builder.Services.AddOpenIddict()
         options.AllowAuthorizationCodeFlow()
                .RequireProofKeyForCodeExchange();
 
-        options.RegisterScopes("openid", "profile", "email", "phone", "roles", "vetting_status");
+        // Service-to-service: HRMS Identity calls /api/admin/users/{id} with a
+        // bearer token instead of the legacy X-Admin-Key header. The hrms-admin
+        // confidential client uses this grant; requested scope is one of the
+        // fine-grained pishro-auth.admin.* slugs (today only users.delete).
+        options.AllowClientCredentialsFlow();
+
+        options.RegisterScopes(
+            "openid", "profile", "email", "phone", "roles", "vetting_status",
+            "pishro-auth.admin.users.delete");
 
         // Dev signing credentials (replace with proper certs in production)
         options.AddDevelopmentEncryptionCertificate()
