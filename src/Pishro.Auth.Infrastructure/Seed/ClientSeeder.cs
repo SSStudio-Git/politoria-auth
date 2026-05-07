@@ -193,32 +193,32 @@ public class ClientSeeder(
         var existing = await manager.FindByClientIdAsync(clientId, ct);
         if (existing is not null)
         {
-            // Sync permissions only — leave ClientSecret untouched. OpenIddict
-            // hashes secrets at create-time; there is no plaintext to round-
-            // trip into UpdateAsync, and rotating here would silently break
-            // every HRMS deploy that still has the old secret in env.
+            // The descriptor-based UpdateAsync can't preserve the existing
+            // hashed secret (OpenIddict hashes plaintext on the way down;
+            // re-hashing the hash breaks auth). And the lower-level Set*
+            // methods on the manager interface aren't surfaced. So we
+            // detect a permissions-mismatch and emit a loud warning — the
+            // operator follows the runbook (delete row + restart) to pick
+            // up new scopes. Same model as the secret-can't-be-retrieved
+            // contract: rotation is a deliberate operator action.
             var current = await manager.GetPermissionsAsync(existing, ct);
-            if (!current.OrderBy(s => s).SequenceEqual(permissions.OrderBy(s => s)))
+            var missing = permissions.Except(current).ToList();
+            if (missing.Count > 0)
             {
-                var descriptor = new OpenIddictApplicationDescriptor();
-                await manager.PopulateAsync(descriptor, existing, ct);
-                descriptor.Permissions.Clear();
-                foreach (var p in permissions) descriptor.Permissions.Add(p);
-                // Suppress secret rewrite — descriptor.ClientSecret is null
-                // here, but PopulateAsync may have copied a placeholder. We
-                // explicitly null it before UpdateAsync so OpenIddict's
-                // ApplicationManager keeps the existing hashed secret.
-                descriptor.ClientSecret = null;
-                await manager.UpdateAsync(existing, descriptor, ct);
-                logger.LogInformation(
-                    "OIDC client '{ClientId}' permissions synced; secret unchanged.",
-                    clientId);
+                logger.LogWarning(
+                    "OIDC client '{ClientId}' is missing permissions: [{Missing}]. " +
+                    "To pick them up: " +
+                    "(1) docker exec -it pishro-auth-auth-db-1 psql -U pishroauth -d pishro_auth " +
+                    "-c \"DELETE FROM open_iddict_applications WHERE client_id='{ClientId}';\" " +
+                    "(2) docker compose restart auth-server " +
+                    "(3) grep the new ONE-TIME secret out of the logs " +
+                    "(4) update HRMS env (PISHRO_AUTH_ADMIN_CLIENT_SECRET) and restart hrms-identity.",
+                    clientId, string.Join(", ", missing), clientId);
             }
             else
             {
                 logger.LogInformation(
-                    "OIDC client '{ClientId}' permissions already in sync; nothing to do.",
-                    clientId);
+                    "OIDC client '{ClientId}' permissions are in sync.", clientId);
             }
             return;
         }
