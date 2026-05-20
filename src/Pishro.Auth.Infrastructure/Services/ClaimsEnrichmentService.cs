@@ -119,6 +119,29 @@ public class ClaimsEnrichmentService(
             }
         }
 
+        // Harmonization Wave B — fetch OrgUnit affiliations from HRMS
+        // Organization. Emitted as a comma-separated `org_units` claim
+        // mirroring the `tenant_ids` shape. Drives ForOrgUnits<T> +
+        // RequireOrgUnitPermission on workspace endpoints. Claim is
+        // omitted when the user isn't affiliated with any unit.
+        var organizationBaseUrl = configuration["Hrms:OrganizationBaseUrl"];
+        if (!string.IsNullOrEmpty(organizationBaseUrl))
+        {
+            try
+            {
+                var unitIds = await client.GetFromJsonAsync<Guid[]>(
+                    $"{organizationBaseUrl}/api/organization/internal/unit-ids-for-member/{userId}", ct);
+                if (unitIds is { Length: > 0 })
+                {
+                    claims.Add(new Claim("org_units", string.Join(",", unitIds)));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to fetch OrgUnits from HRMS Organization for user {UserId}", userId);
+            }
+        }
+
         return claims;
     }
 }
