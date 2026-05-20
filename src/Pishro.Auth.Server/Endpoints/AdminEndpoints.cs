@@ -18,8 +18,9 @@ namespace Pishro.Auth.Server.Endpoints;
 ///
 /// Auth: OAuth2 client_credentials bearer tokens scoped to the matching
 /// fine-grained <c>pishro-auth.admin.&lt;domain&gt;.&lt;action&gt;</c> scope.
-/// During the cutover from the legacy <c>X-Admin-Key</c> header, the
-/// delete endpoint also accepts the header; PR 3 removes that fallback.
+/// The legacy <c>X-Admin-Key</c> header was retired in Harmonization
+/// Wave A once break-glass shipped the synthetic test seam needed to
+/// verify the bearer cascade end-to-end on prod.
 /// </summary>
 public static class AdminEndpoints
 {
@@ -126,7 +127,7 @@ public static class AdminEndpoints
         }).WithName("AdminGetUserStatus");
 
         // DELETE /api/admin/users/{userId} — cascade hard-delete from HRMS.
-        // Accepts bearer or legacy X-Admin-Key (PR 3 removes the header path).
+        // Bearer-only since Harmonization Wave A.
         group.MapDelete("/users/{userId:guid}", async (
             HttpContext httpContext,
             Guid userId,
@@ -152,70 +153,32 @@ public static class AdminEndpoints
     }
 
     /// <summary>
-    /// Try the bearer path first; on miss, fall back to the legacy header
-    /// (delete endpoint only — create + status require bearer because they
-    /// post-date the cutover). Returns null when authorized; otherwise an
-    /// IResult to short-circuit with 401 / 403 / 503.
+    /// Bearer-only since Harmonization Wave A. Returns null when authorized;
+    /// otherwise an IResult to short-circuit with 401 / 403.
     /// </summary>
     private static async Task<IResult?> AuthorizeAsync(HttpContext httpContext, string requiredScope)
     {
         var authHeader = httpContext.Request.Headers.Authorization.ToString();
-        if (!string.IsNullOrEmpty(authHeader) &&
-            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            var result = await httpContext.AuthenticateAsync(
-                OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
-
-            if (!result.Succeeded || result.Principal is null)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!HasScope(result.Principal, requiredScope))
-            {
-                return Results.Forbid();
-            }
-
-            httpContext.User = result.Principal;
-            return null;
-        }
-
-        // Legacy header path is only honoured for the delete scope. New
-        // endpoints (create, status) require bearer — no transitional
-        // shared-secret coverage.
-        if (requiredScope != ClientSeeder.AdminUsersDeleteScope)
+        if (string.IsNullOrEmpty(authHeader) ||
+            !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
             return Results.Unauthorized();
         }
 
-        return AuthorizeWithLegacyHeader(httpContext);
-    }
+        var result = await httpContext.AuthenticateAsync(
+            OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 
-    /// <summary>
-    /// Pre-OIDC fallback. Removed in PR 3 once HRMS has cut over.
-    /// </summary>
-    private static IResult? AuthorizeWithLegacyHeader(HttpContext httpContext)
-    {
-        var configured = httpContext.RequestServices
-            .GetRequiredService<IConfiguration>()["Admin:Key"];
-
-        if (string.IsNullOrWhiteSpace(configured))
-        {
-            // Misconfigured AND no bearer presented — fail closed.
-            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-
-        var presented = httpContext.Request.Headers["X-Admin-Key"].ToString();
-        if (string.IsNullOrEmpty(presented))
+        if (!result.Succeeded || result.Principal is null)
         {
             return Results.Unauthorized();
         }
 
-        if (!string.Equals(presented, configured, StringComparison.Ordinal))
+        if (!HasScope(result.Principal, requiredScope))
         {
-            return Results.Unauthorized();
+            return Results.Forbid();
         }
 
+        httpContext.User = result.Principal;
         return null;
     }
 
