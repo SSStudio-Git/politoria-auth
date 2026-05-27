@@ -17,7 +17,7 @@ services:
   auth-server:
     build:
       context: ./src
-      dockerfile: Pishro.Auth.Server/Dockerfile
+      dockerfile: Politoria.Auth.Server/Dockerfile
     depends_on:
       auth-db:
         condition: service_healthy
