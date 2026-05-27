@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Politoria.Auth.Server
-# Build context expected: pishro-auth/src
+# Build context expected: politoria-auth/src
 
 # Stage 1: restore
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS restore
