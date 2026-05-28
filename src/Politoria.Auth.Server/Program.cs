@@ -157,6 +157,32 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
+// Brand-templated auth pages — runs before UseStaticFiles so the {{BrandName}}
+// placeholder in the login/register HTML is substituted from config instead of
+// serving the raw file. ProductName defaults to "Politoria"; a deployment sets
+// Branding__ProductName to its own brand (e.g. Pishro) to keep its title.
+var brandName = builder.Configuration["Branding:ProductName"] ?? "Politoria";
+var templatedPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "/login.html", "/register.html", "/invite/register.html"
+};
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value;
+    if (path is not null && templatedPages.Contains(path) && HttpMethods.IsGet(ctx.Request.Method))
+    {
+        var file = Path.Combine(app.Environment.WebRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(file))
+        {
+            var html = (await File.ReadAllTextAsync(file)).Replace("{{BrandName}}", brandName);
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            await ctx.Response.WriteAsync(html);
+            return;
+        }
+    }
+    await next();
+});
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
