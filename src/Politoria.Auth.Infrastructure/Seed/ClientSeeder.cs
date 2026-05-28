@@ -113,6 +113,12 @@ public class ClientSeeder(
                 OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange,
             },
         };
+        // Additional redirect/post-logout URIs from config so non-prod surfaces
+        // (e.g. the demo at portal.demo.politoria.com) work without code edits.
+        // Set Oidc__Portal__RedirectUris__0 / Oidc__Portal__PostLogoutUris__0 in env.
+        AddConfiguredUris(portalDescriptor.RedirectUris, "Oidc:Portal:RedirectUris");
+        AddConfiguredUris(portalDescriptor.PostLogoutRedirectUris, "Oidc:Portal:PostLogoutUris");
+
         var existingPortal = await manager.FindByClientIdAsync("portal", ct);
         if (existingPortal is null)
             await manager.CreateAsync(portalDescriptor, ct);
@@ -157,6 +163,9 @@ public class ClientSeeder(
                 OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange
             }
         };
+
+        AddConfiguredUris(hrmsDescriptor.RedirectUris, "Oidc:Hrms:RedirectUris");
+        AddConfiguredUris(hrmsDescriptor.PostLogoutRedirectUris, "Oidc:Hrms:PostLogoutUris");
 
         var existingHrms = await manager.FindByClientIdAsync("hrms", ct);
         if (existingHrms is null)
@@ -258,6 +267,23 @@ public class ClientSeeder(
             "is hashed in the IdP DB; this is the only time it will appear.\n" +
             "═══════════════════════════════════════════════════════════════════",
             clientId, secret, source);
+    }
+
+    /// <summary>
+    /// Unions absolute URIs from a config array (e.g. Oidc:Portal:RedirectUris)
+    /// into an OpenIddict descriptor URI collection. Invalid/duplicate entries
+    /// are skipped. Lets each environment add its own surface URLs without code.
+    /// </summary>
+    private void AddConfiguredUris(ICollection<Uri> target, string configKey)
+    {
+        var values = configuration.GetSection(configKey).Get<string[]>();
+        if (values is null) return;
+        foreach (var v in values)
+        {
+            if (string.IsNullOrWhiteSpace(v)) continue;
+            if (!Uri.TryCreate(v.Trim(), UriKind.Absolute, out var uri)) continue;
+            if (!target.Contains(uri)) target.Add(uri);
+        }
     }
 
     private static string GenerateSecret()
