@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
+using Politoria.Auth.Application.Services;
 using Politoria.Auth.Domain.Entities;
 using Politoria.Auth.Infrastructure.Persistence;
 using Politoria.Auth.Infrastructure.Seed;
@@ -91,6 +92,29 @@ public static class AdminEndpoints
                 created = true,
             });
         }).WithName("AdminCreateUser");
+
+        // POST /api/admin/users/{userId}/send-password-setup — req/004. For an
+        // admin/invite-created user with an email, email a one-time "set your
+        // password" link (the email+password credential path; passkey users use
+        // the invite-handoff ceremony instead). Invite-only — no public signup.
+        group.MapPost("/users/{userId:guid}/send-password-setup", async (
+            HttpContext httpContext,
+            Guid userId,
+            AuthDbContext db,
+            IPasswordAuthService passwordAuth,
+            CancellationToken ct) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, ClientSeeder.AdminUsersCreateScope);
+            if (auth is not null) return auth;
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+            if (user is null) return Results.NotFound();
+            if (string.IsNullOrWhiteSpace(user.Email))
+                return Results.BadRequest(new { error = "User has no email address." });
+
+            await passwordAuth.IssueSetupInviteAsync(user.Id, user.Email, ct);
+            return Results.Ok(new { success = true });
+        }).WithName("AdminSendPasswordSetup");
 
         // GET /api/admin/users/{userId}/status — used by HRMS during the
         // break-glass flow to poll until the new member has bound a passkey.

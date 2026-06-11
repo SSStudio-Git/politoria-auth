@@ -34,6 +34,11 @@ public class User : BaseEntity
 
     public bool IsActive { get; private set; } = true;
 
+    // req/004 — optional email+password credential (BCrypt hash). Null for
+    // passkey-only users; they cannot password-login.
+    [MaxLength(200)]
+    public string? PasswordHash { get; private set; }
+
     public DateTimeOffset? LastLoginAt { get; private set; }
 
     public ICollection<PasskeyCredential> Passkeys { get; private set; } = new List<PasskeyCredential>();
@@ -78,6 +83,15 @@ public class User : BaseEntity
     public void RecordLogin()
     {
         LastLoginAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    // req/004 — set/replace the email+password credential (caller supplies the
+    // BCrypt hash) and mark the email verified (set/reset happens via a token).
+    public void SetPasswordHash(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+        EmailVerified = true;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

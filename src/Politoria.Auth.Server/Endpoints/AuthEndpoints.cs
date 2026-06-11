@@ -114,7 +114,7 @@ public static class AuthEndpoints
         });
     }
 
-    private static List<Claim> BuildClaims(Guid userId, string? displayName, string? email, string? phone)
+    internal static List<Claim> BuildClaims(Guid userId, string? displayName, string? email, string? phone)
     {
         var claims = new List<Claim>
         {

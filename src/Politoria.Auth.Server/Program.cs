@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -81,6 +82,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(options =>
     {
         options.LoginPath = "/login.html";
+        // Bound the SSO session to ~1h (matches the token lifetime). A fixed
+        // (non-sliding) window means a returning user is re-challenged for their
+        // passkey at least hourly rather than riding a long-lived cached cookie.
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = false;
     });
 
 builder.Services.AddDistributedMemoryCache();
@@ -97,8 +103,25 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IPasskeyService, PasskeyService>();
 builder.Services.AddScoped<IClaimsEnrichmentService, ClaimsEnrichmentService>();
 builder.Services.AddScoped<IInviteHandoffService, InviteHandoffService>();
+builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddHttpClient("hrms-internal");
 builder.Services.AddScoped<ClientSeeder>();
+
+// req/004 — publish-only message bus so auth emails (OTP / set-password / reset)
+// are delivered by Hrms.Communication (Resend) via the SendEmail command.
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(
+            builder.Configuration["RabbitMq:Host"] ?? "localhost", "/",
+            h =>
+            {
+                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+            });
+    });
+});
 
 var app = builder.Build();
 
@@ -164,7 +187,7 @@ app.Use(async (ctx, next) =>
 var brandName = builder.Configuration["Branding:ProductName"] ?? "Politoria";
 var templatedPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
-    "/login.html", "/register.html", "/invite/register.html"
+    "/login.html", "/register.html", "/invite/register.html", "/set-password.html"
 };
 app.Use(async (ctx, next) =>
 {
@@ -189,6 +212,7 @@ app.UseAuthorization();
 
 // Map endpoints
 app.MapAuthEndpoints();
+app.MapPasswordAuthEndpoints();
 app.MapConnectEndpoints();
 app.MapAdminEndpoints();
 

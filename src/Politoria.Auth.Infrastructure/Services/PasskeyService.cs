@@ -45,7 +45,8 @@ public class PasskeyService(
             AuthenticatorSelection = new AuthenticatorSelection
             {
                 ResidentKey = ResidentKeyRequirement.Required,
-                UserVerification = UserVerificationRequirement.Preferred,
+                // Require user verification (biometric/PIN) — true MFA, not just key presence.
+                UserVerification = UserVerificationRequirement.Required,
             },
             AttestationPreference = AttestationConveyancePreference.None
         });
@@ -151,7 +152,8 @@ public class PasskeyService(
         var options = fido2.GetAssertionOptions(new GetAssertionOptionsParams
         {
             AllowedCredentials = [],
-            UserVerification = UserVerificationRequirement.Preferred
+            // Require user verification (biometric/PIN) on every login assertion.
+            UserVerification = UserVerificationRequirement.Required
         });
 
         var challengeId = Guid.NewGuid().ToString();

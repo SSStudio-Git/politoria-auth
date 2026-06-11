@@ -7,6 +7,9 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<PasskeyCredential> PasskeyCredentials => Set<PasskeyCredential>();
+    // req/004 — email+password auth tokens.
+    public DbSet<EmailOtpToken> EmailOtpTokens => Set<EmailOtpToken>();
+    public DbSet<PasswordSetupToken> PasswordSetupTokens => Set<PasswordSetupToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +31,18 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
                 .WithMany(u => u.Passkeys)
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailOtpToken>(entity =>
+        {
+            entity.HasIndex(t => t.UserId);
+            entity.HasIndex(t => t.Email);
+        });
+
+        modelBuilder.Entity<PasswordSetupToken>(entity =>
+        {
+            entity.HasIndex(t => t.Token).IsUnique();
+            entity.HasIndex(t => t.UserId);
         });
 
         modelBuilder.ApplySnakeCaseNaming();

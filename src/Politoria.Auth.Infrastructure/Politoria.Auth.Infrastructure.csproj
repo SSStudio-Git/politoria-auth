@@ -13,6 +13,10 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="6.3.0" />
     <PackageReference Include="Fido2.AspNet" Version="4.0.0" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <!-- Pin transitive Microsoft.Bcl.Memory above 9.0.0 (GHSA-73j8-2gch-69rq high-severity advisory). -->
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.16" />
+    <PackageReference Include="MassTransit" Version="8.*" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.4" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
