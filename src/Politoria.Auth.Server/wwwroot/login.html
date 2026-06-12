@@ -162,7 +162,7 @@
 </head>
 <body>
     <div class="card">
-        <h1>Sign In</h1>
+        <h1 id="title">Sign In</h1>
         <p class="sub" id="subtitle">Sign in to your account</p>
         <div class="error" id="error"></div>
 
@@ -176,32 +176,32 @@
             <!-- Step 1: credentials -->
             <div id="stepCreds">
                 <div class="field">
-                    <label for="email">Email</label>
+                    <label for="email" id="emailLabel">Email</label>
                     <input class="input" id="email" type="email" autocomplete="username" placeholder="you@example.com">
                 </div>
                 <div class="field">
-                    <label for="password">Password</label>
+                    <label for="password" id="passwordLabel">Password</label>
                     <input class="input" id="password" type="password" autocomplete="current-password" placeholder="••••••••">
                 </div>
                 <button class="btn btn-primary" id="credsBtn" onclick="submitCreds()">
                     <span class="spinner" id="credsSpinner"></span>
                     <span id="credsText">Continue</span>
                 </button>
-                <button class="link" onclick="forgotPassword()">Forgot your password?</button>
+                <button class="link" id="forgotBtn" onclick="forgotPassword()">Forgot your password?</button>
             </div>
 
             <!-- Step 2: OTP -->
             <div id="stepOtp" class="hidden">
-                <p class="sub">We sent a 6-digit code to <strong id="otpEmail"></strong>. Enter it below.</p>
+                <p class="sub"><span id="otpSentPre">We sent a 6-digit code to </span><strong id="otpEmail"></strong><span id="otpSentPost">. Enter it below.</span></p>
                 <div class="field">
-                    <label for="otp">Verification code</label>
+                    <label for="otp" id="otpLabel">Verification code</label>
                     <input class="input otp" id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
                 </div>
                 <button class="btn btn-primary" id="otpBtn" onclick="submitOtp()">
                     <span class="spinner" id="otpSpinner"></span>
                     <span id="otpText">Verify &amp; sign in</span>
                 </button>
-                <button class="link" onclick="backToCreds()">← Use a different account</button>
+                <button class="link" id="backToCredsBtn" onclick="backToCreds()">← Use a different account</button>
             </div>
         </div>
 
@@ -214,11 +214,46 @@
         </div>
 
         <a id="registerLink" href="/register.html" class="link">Don't have an account? Register</a>
+        <div style="margin-top:18px;text-align:center;font-size:13px;opacity:.7" id="langBar"></div>
     </div>
 
     <script src="https://unpkg.com/@simplewebauthn/browser@11/dist/bundle/index.umd.min.js"></script>
     <script>
         const { startAuthentication } = SimpleWebAuthnBrowser;
+
+        // ── i18n ──────────────────────────────────────────────────────────
+        const I18N = {
+          en: {title:"Sign In",subtitle:"Sign in to your account",tabPassword:"Email & Password",tabPasskey:"Passkey",emailLabel:"Email",passwordLabel:"Password",credsText:"Continue",forgotBtn:"Forgot your password?",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & sign in",backToCredsBtn:"← Use a different account",btnText:"Sign in with Passkey",registerLink:"Don't have an account? Register"},
+          fa: {title:"ورود",subtitle:"به حساب خود وارد شوید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",emailLabel:"ایمیل",passwordLabel:"گذرواژه",credsText:"ادامه",forgotBtn:"گذرواژه‌تان را فراموش کرده‌اید؟",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ورود",backToCredsBtn:"← استفاده از حسابی دیگر",btnText:"ورود با کلید عبور",registerLink:"حساب ندارید؟ ثبت‌نام کنید"},
+          ar: {title:"تسجيل الدخول",subtitle:"سجّل الدخول إلى حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",credsText:"متابعة",forgotBtn:"هل نسيت كلمة المرور؟",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وسجّل الدخول",backToCredsBtn:"← استخدام حساب آخر",btnText:"الدخول بمفتاح المرور",registerLink:"ليس لديك حساب؟ سجّل"},
+          az: {title:"گیریش",subtitle:"حسابینیزا داخیل اولون",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",emailLabel:"ایمیل",passwordLabel:"پاروْل",credsText:"داوام",forgotBtn:"پاروْلونوزو اونوتموسونوز؟",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و گیریش",backToCredsBtn:"← باشقا حساب ایشلَت",btnText:"گیریش آچاری ایله داخیل اول",registerLink:"حسابینیز یوخدور؟ قئیدیّاتدان کئچین"},
+          ku: {title:"چوونەژوورەوە",subtitle:"بچۆ ژوورەوە بۆ هەژمارەکەت",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",credsText:"بەردەوامبوون",forgotBtn:"وشەی نهێنیت لەبیرکردووە؟",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و چوونەژوورەوە",backToCredsBtn:"← هەژمارێکی تر بەکاربهێنە",btnText:"چوونەژوورەوە بە کلیل",registerLink:"هەژمارت نییە؟ خۆت تۆمار بکە"},
+          bal: {title:"درشُدگ",subtitle:"وتی حسابا درشُدگ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",emailLabel:"ایمیل",passwordLabel:"رمز",credsText:"دیمتر",forgotBtn:"وتی رمز شُمئے یاتا رفتگ؟",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و درشُدگ",backToCredsBtn:"← دگه حسابی استمال کن",btnText:"کلیدا درشُدگ",registerLink:"تئے حساب نیست؟ نام‌نویسی کن"},
+        };
+        const RTL = ["fa","ar","az","ku","bal"];
+        function currentLang() {
+          const p = new URLSearchParams(location.search).get("lang");
+          if (p && I18N[p]) { document.cookie = "ui_lang="+p+";path=/;max-age=31536000"; return p; }
+          const c = (document.cookie.match(/ui_lang=([a-z]+)/)||[])[1];
+          if (c && I18N[c]) return c;
+          const n = (navigator.language||"en").split("-")[0];
+          return I18N[n] ? n : "fa";
+        }
+        function applyI18n() {
+          const lang = currentLang();
+          const m = I18N[lang] || I18N.fa;
+          document.documentElement.lang = lang;
+          document.documentElement.dir = RTL.includes(lang) ? "rtl" : "ltr";
+          for (const id in m) { const el = document.getElementById(id); if (el) el.textContent = m[id]; }
+          const names = {en:"English",fa:"فارسی",ar:"العربية",az:"تۆرکجه",ku:"کوردی",bal:"بلۏچی"};
+          const bar = document.getElementById("langBar");
+          if (bar) bar.innerHTML = Object.keys(I18N).map(l => {
+            if (l === lang) return `<b>${names[l]}</b>`;
+            const u = new URL(location.href); u.searchParams.set("lang", l);
+            return `<a href="${u.pathname}${u.search}" style="color:inherit">${names[l]}</a>`;
+          }).join(" · ");
+        }
+        applyI18n();
 
         function getReturnUrl() {
             const params = new URLSearchParams(window.location.search);
