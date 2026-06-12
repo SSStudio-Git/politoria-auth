@@ -118,12 +118,12 @@
 </head>
 <body>
     <div class="card">
-        <h1>Create Account</h1>
-        <p>Register a passkey to create your account</p>
+        <h1 id="title">Create Account</h1>
+        <p id="subtitle">Register a passkey to create your account</p>
         <div class="error" id="error"></div>
         <div class="success" id="success"></div>
         <div class="input-group">
-            <label for="displayName">Display Name</label>
+            <label for="displayName" id="nameLabel">Display Name</label>
             <input type="text" id="displayName" placeholder="Enter your name" />
         </div>
         <button class="btn btn-primary" id="registerBtn" onclick="startRegister()">
@@ -131,11 +131,24 @@
             <span id="btnText">Create account with Passkey</span>
         </button>
         <a id="loginLink" href="/login.html" class="link">Already have an account? Sign in</a>
+        <div style="margin-top:18px;text-align:center;font-size:13px;opacity:.7" id="langBar"></div>
     </div>
 
     <script src="https://unpkg.com/@simplewebauthn/browser@11/dist/bundle/index.umd.min.js"></script>
     <script>
         const { startRegistration } = SimpleWebAuthnBrowser;
+
+        const I18N = {
+          en:{title:"Create Account",subtitle:"Register a passkey to create your account",nameLabel:"Display Name",namePlaceholder:"Enter your name",btnText:"Create account with Passkey",loginLink:"Already have an account? Sign in"},
+          fa:{title:"ساخت حساب",subtitle:"برای ساخت حساب، یک کلید عبور ثبت کنید",nameLabel:"نام نمایشی",namePlaceholder:"نام خود را وارد کنید",btnText:"ساخت حساب با کلید عبور",loginLink:"حساب دارید؟ وارد شوید"},
+          ar:{title:"إنشاء حساب",subtitle:"سجّل مفتاح مرور لإنشاء حسابك",nameLabel:"الاسم المعروض",namePlaceholder:"أدخل اسمك",btnText:"إنشاء حساب بمفتاح المرور",loginLink:"لديك حساب؟ سجّل الدخول"},
+          az:{title:"حساب یارات",subtitle:"حساب یاراتماق اوچون بیر گیریش آچاری قئیدّیاتدان کئچیرین",nameLabel:"گؤرسه‌نن آد",namePlaceholder:"آدینیزی داخیل ائدین",btnText:"گیریش آچاری ایله حساب یارات",loginLink:"حسابینیز وار؟ داخیل اولون"},
+          ku:{title:"دروستکردنی هەژمار",subtitle:"کلیلێکی چوونەژوورەوە تۆمار بکە بۆ دروستکردنی هەژمارەکەت",nameLabel:"ناوی پیشاندان",namePlaceholder:"ناوەکەت بنووسە",btnText:"دروستکردنی هەژمار بە کلیل",loginLink:"هەژمارت هەیە؟ بچۆ ژوورەوە"},
+          bal:{title:"حساب جوڑ کن",subtitle:"وتی حسابئے جوڑ کنگ آ یک درشُدگی کلید ثبت کن",nameLabel:"نمائشی نام",namePlaceholder:"وتی نام نبیس کن",btnText:"کلیدا حساب جوڑ کن",loginLink:"تئے حساب هست؟ درشُدگ کن"},
+        };
+        const RTL = ["fa","ar","az","ku","bal"];
+        function currentLang(){const p=new URLSearchParams(location.search).get("lang");if(p&&I18N[p]){document.cookie="ui_lang="+p+";path=/;max-age=31536000";return p;}const c=(document.cookie.match(/ui_lang=([a-z]+)/)||[])[1];if(c&&I18N[c])return c;const n=(navigator.language||"en").split("-")[0];return I18N[n]?n:"fa";}
+        (function applyI18n(){const lang=currentLang();const m=I18N[lang]||I18N.fa;document.documentElement.lang=lang;document.documentElement.dir=RTL.includes(lang)?"rtl":"ltr";for(const id in m){if(id==="namePlaceholder")continue;const el=document.getElementById(id);if(el)el.textContent=m[id];}const np=document.getElementById("displayName");if(np)np.placeholder=m.namePlaceholder;const names={en:"English",fa:"فارسی",ar:"العربية",az:"تۆرکجه",ku:"کوردی",bal:"بلۏچی"};const bar=document.getElementById("langBar");if(bar)bar.innerHTML=Object.keys(I18N).map(l=>{if(l===lang)return "<b>"+names[l]+"</b>";const u=new URL(location.href);u.searchParams.set("lang",l);return '<a href="'+u.pathname+u.search+'" style="color:inherit">'+names[l]+"</a>";}).join(" · ");})();
 
         // Pass returnUrl to login link
         (function() {
