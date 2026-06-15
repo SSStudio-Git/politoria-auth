@@ -330,6 +330,16 @@ public static class ConnectEndpoints
                 OpenIddictConstants.Destinations.IdentityToken
             ],
 
+            // ClaimsEnrichmentService emits the PLURAL `tenant_ids` (comma-separated),
+            // which HRMS reads via CurrentUser.TenantIds. Without this case it fell to
+            // `_ => []` and OpenIddict stripped it before signing — leaving HRMS with an
+            // empty tenant (Guid.Empty) so admin writes (e.g. the Public-Site theme) hit a
+            // phantom tenant. Same trap as `full_access` above.
+            "tenant_ids" when principal.HasScope(RolesScope) => [
+                OpenIddictConstants.Destinations.AccessToken,
+                OpenIddictConstants.Destinations.IdentityToken
+            ],
+
             _ => []
         };
     }
