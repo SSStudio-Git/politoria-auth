@@ -107,10 +107,22 @@ public class PasswordAuthService(
             $"To {verb} your {Brand} password, open: {link}", ct);
     }
 
-    private Task PublishEmail(string to, string subject, string html, string text, CancellationToken ct)
+    private async Task PublishEmail(string to, string subject, string html, string text, CancellationToken ct)
     {
         logger.LogInformation("Auth email → {To}: {Subject}", to, subject);
-        return bus.Publish(new SendEmail(to, subject, html, text), ct);
+        try
+        {
+            await bus.Publish(new SendEmail(to, subject, html, text), ct);
+        }
+        catch (Exception ex)
+        {
+            // Email is a best-effort side-effect: by the time we publish, the OTP /
+            // setup / reset token is already persisted. A transient broker outage must
+            // NOT fail the auth operation (login/reset/setup) — log loudly and continue
+            // so the caller still gets requiresOtp and can resend, rather than a 500.
+            // (req/004 C1 caught a RabbitMQ outage 500-ing every email+password login.)
+            logger.LogError(ex, "Failed to publish auth email to {To} ({Subject}); token persisted, delivery skipped.", to, subject);
+        }
     }
 
     private static string Base64Url(byte[] bytes) =>
