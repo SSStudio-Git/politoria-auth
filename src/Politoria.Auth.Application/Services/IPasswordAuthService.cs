@@ -17,6 +17,10 @@ public interface IPasswordAuthService
     /// OTP was sent, false for any failure (generic — no enumeration).</summary>
     Task<bool> RequestLoginAsync(string email, string password, CancellationToken ct);
 
+    /// <summary>Re-issue a sign-in OTP for an in-progress login/signup. Silent (no
+    /// enumeration) and only fires if a flow was recently started for the email.</summary>
+    Task ResendOtpAsync(string email, CancellationToken ct);
+
     /// <summary>Validate the OTP; on success record the login and return the user to
     /// sign in. Null on any failure.</summary>
     Task<SignedInUser?> VerifyOtpAsync(string email, string code, CancellationToken ct);

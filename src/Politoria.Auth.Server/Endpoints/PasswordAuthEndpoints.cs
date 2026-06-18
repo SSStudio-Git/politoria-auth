@@ -16,7 +16,7 @@ public static class PasswordAuthEndpoints
 {
     public static void MapPasswordAuthEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/password");
+        var group = app.MapGroup("/api/password").RequireRateLimiting("auth");
 
         // Public self-signup: create an email+password account → send confirmation OTP.
         // Always returns requiresOtp (no enumeration); the portal's OIDC callback turns
@@ -31,11 +31,21 @@ public static class PasswordAuthEndpoints
                 return Results.BadRequest(new { error = "Name, email, and password are required." });
             if (!email.Contains('@') || email.Length > 200)
                 return Results.BadRequest(new { error = "Enter a valid email address." });
-            if (password.Length < 8)
-                return Results.BadRequest(new { error = "Password must be at least 8 characters." });
+            if (!PasswordPolicy.IsAcceptable(password, out var pwError))
+                return Results.BadRequest(new { error = pwError });
 
             await svc.RegisterAsync(email, password, displayName, ct);
             return Results.Ok(new { requiresOtp = true, email });
+        });
+
+        // Resend the sign-in OTP (in-progress login/signup). Always 200 (no enumeration).
+        group.MapPost("/resend-otp", async (
+            JsonElement body, IPasswordAuthService svc, CancellationToken ct) =>
+        {
+            var email = body.TryGetProperty("email", out var e) ? e.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(email))
+                await svc.ResendOtpAsync(email, ct);
+            return Results.Ok(new { sent = true });
         });
 
         // Step 1: email + password → send OTP.
@@ -81,8 +91,8 @@ public static class PasswordAuthEndpoints
             var newPassword = body.TryGetProperty("newPassword", out var np) ? np.GetString() : null;
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(newPassword))
                 return Results.BadRequest(new { error = "Token and a new password are required." });
-            if (newPassword.Length < 8)
-                return Results.BadRequest(new { error = "Password must be at least 8 characters." });
+            if (!PasswordPolicy.IsAcceptable(newPassword, out var pwError))
+                return Results.BadRequest(new { error = pwError });
 
             var ok = await svc.SetPasswordAsync(token, newPassword, ct);
             return ok

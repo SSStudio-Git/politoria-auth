@@ -105,6 +105,7 @@
                     <span class="spinner" id="otpSpinner"></span>
                     <span id="otpText">Verify &amp; continue</span>
                 </button>
+                <button class="link" id="resendBtn" onclick="resendOtp()">Resend code</button>
                 <button class="link" id="backBtn" onclick="backToForm()">← Start over</button>
             </div>
         </div>
@@ -130,12 +131,12 @@
         const { startRegistration } = SimpleWebAuthnBrowser;
 
         const I18N = {
-          en:{title:"Create Account",subtitle:"Create your account",tabPassword:"Email & Password",tabPasskey:"Passkey",nameLabel:"Display Name",namePlaceholder:"Enter your name",emailLabel:"Email",passwordLabel:"Password",passwordHint:"At least 8 characters.",createText:"Create account",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & continue",backBtn:"← Start over",pkNameLabel:"Display Name",btnText:"Create account with Passkey",loginLink:"Already have an account? Sign in"},
-          fa:{title:"ساخت حساب",subtitle:"حساب خود را بسازید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",nameLabel:"نام نمایشی",namePlaceholder:"نام خود را وارد کنید",emailLabel:"ایمیل",passwordLabel:"گذرواژه",passwordHint:"حداقل ۸ نویسه.",createText:"ساخت حساب",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ادامه",backBtn:"← از نو شروع کن",pkNameLabel:"نام نمایشی",btnText:"ساخت حساب با کلید عبور",loginLink:"حساب دارید؟ وارد شوید"},
-          ar:{title:"إنشاء حساب",subtitle:"أنشئ حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",nameLabel:"الاسم المعروض",namePlaceholder:"أدخل اسمك",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",passwordHint:"٨ أحرف على الأقل.",createText:"إنشاء حساب",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وتابع",backBtn:"← ابدأ من جديد",pkNameLabel:"الاسم المعروض",btnText:"إنشاء حساب بمفتاح المرور",loginLink:"لديك حساب؟ سجّل الدخول"},
-          az:{title:"حساب یارات",subtitle:"حسابینیزی یارادین",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",nameLabel:"گؤرسه‌نن آد",namePlaceholder:"آدینیزی داخیل ائدین",emailLabel:"ایمیل",passwordLabel:"پاروْل",passwordHint:"ان آز ۸ ساده.",createText:"حساب یارات",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و داوام",backBtn:"← یئنیدن باشلا",pkNameLabel:"گؤرسه‌نن آد",btnText:"گیریش آچاری ایله حساب یارات",loginLink:"حسابینیز وار؟ داخیل اولون"},
-          ku:{title:"دروستکردنی هەژمار",subtitle:"هەژمارەکەت دروست بکە",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",nameLabel:"ناوی پیشاندان",namePlaceholder:"ناوەکەت بنووسە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",passwordHint:"بەلایەنی کەم ٨ نووسە.",createText:"دروستکردنی هەژمار",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و بەردەوامبوون",backBtn:"← لە سەرەتاوە دەستپێبکە",pkNameLabel:"ناوی پیشاندان",btnText:"دروستکردنی هەژمار بە کلیل",loginLink:"هەژمارت هەیە؟ بچۆ ژوورەوە"},
-          bal:{title:"حساب جوڑ کن",subtitle:"وتی حسابا جوڑ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",nameLabel:"نمائشی نام",namePlaceholder:"وتی نام نبیس کن",emailLabel:"ایمیل",passwordLabel:"رمز",passwordHint:"کم‌ترین ۸ هرف.",createText:"حساب جوڑ کن",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و دیمتر",backBtn:"← سرا چه شروع کن",pkNameLabel:"نمائشی نام",btnText:"کلیدا حساب جوڑ کن",loginLink:"تئے حساب هست؟ درشُدگ کن"},
+          en:{title:"Create Account",subtitle:"Create your account",tabPassword:"Email & Password",tabPasskey:"Passkey",nameLabel:"Display Name",namePlaceholder:"Enter your name",emailLabel:"Email",passwordLabel:"Password",passwordHint:"At least 8 characters.",createText:"Create account",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & continue",backBtn:"← Start over",pkNameLabel:"Display Name",btnText:"Create account with Passkey",loginLink:"Already have an account? Sign in",resendBtn:"Resend code",resendSent:"A new code is on its way."},
+          fa:{title:"ساخت حساب",subtitle:"حساب خود را بسازید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",nameLabel:"نام نمایشی",namePlaceholder:"نام خود را وارد کنید",emailLabel:"ایمیل",passwordLabel:"گذرواژه",passwordHint:"حداقل ۸ نویسه.",createText:"ساخت حساب",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ادامه",backBtn:"← از نو شروع کن",pkNameLabel:"نام نمایشی",btnText:"ساخت حساب با کلید عبور",loginLink:"حساب دارید؟ وارد شوید",resendBtn:"ارسال دوبارهٔ کد",resendSent:"اگر کدتان منقضی شده، کد تازه‌ای فرستادیم."},
+          ar:{title:"إنشاء حساب",subtitle:"أنشئ حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",nameLabel:"الاسم المعروض",namePlaceholder:"أدخل اسمك",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",passwordHint:"٨ أحرف على الأقل.",createText:"إنشاء حساب",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وتابع",backBtn:"← ابدأ من جديد",pkNameLabel:"الاسم المعروض",btnText:"إنشاء حساب بمفتاح المرور",loginLink:"لديك حساب؟ سجّل الدخول",resendBtn:"إعادة إرسال الرمز",resendSent:"إن انتهت صلاحية رمزك، أرسلنا رمزًا جديدًا."},
+          az:{title:"حساب یارات",subtitle:"حسابینیزی یارادین",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",nameLabel:"گؤرسه‌نن آد",namePlaceholder:"آدینیزی داخیل ائدین",emailLabel:"ایمیل",passwordLabel:"پاروْل",passwordHint:"ان آز ۸ ساده.",createText:"حساب یارات",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و داوام",backBtn:"← یئنیدن باشلا",pkNameLabel:"گؤرسه‌نن آد",btnText:"گیریش آچاری ایله حساب یارات",loginLink:"حسابینیز وار؟ داخیل اولون",resendBtn:"کدو یئنیدن گؤنده‌ر",resendSent:"اگر کدینیز بیتیبسه، یئنی کد گؤنده‌ردیک."},
+          ku:{title:"دروستکردنی هەژمار",subtitle:"هەژمارەکەت دروست بکە",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",nameLabel:"ناوی پیشاندان",namePlaceholder:"ناوەکەت بنووسە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",passwordHint:"بەلایەنی کەم ٨ نووسە.",createText:"دروستکردنی هەژمار",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و بەردەوامبوون",backBtn:"← لە سەرەتاوە دەستپێبکە",pkNameLabel:"ناوی پیشاندان",btnText:"دروستکردنی هەژمار بە کلیل",loginLink:"هەژمارت هەیە؟ بچۆ ژوورەوە",resendBtn:"کۆد دووبارە بنێرە",resendSent:"ئەگەر کۆدەکەت بەسەرچووە، کۆدێکی نوێمان نارد."},
+          bal:{title:"حساب جوڑ کن",subtitle:"وتی حسابا جوڑ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",nameLabel:"نمائشی نام",namePlaceholder:"وتی نام نبیس کن",emailLabel:"ایمیل",passwordLabel:"رمز",passwordHint:"کم‌ترین ۸ هرف.",createText:"حساب جوڑ کن",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و دیمتر",backBtn:"← سرا چه شروع کن",pkNameLabel:"نمائشی نام",btnText:"کلیدا حساب جوڑ کن",loginLink:"تئے حساب هست؟ درشُدگ کن",resendBtn:"کدا دگه روان کن",resendSent:"اگر تئی کد سر بوتگ، نوکیں کدے روان کرتگ."},
         };
         const RTL = ["fa","ar","az","ku","bal"];
         function currentLang(){const p=new URLSearchParams(location.search).get("lang");if(p&&I18N[p]){document.cookie="ui_lang="+p+";path=/;max-age=31536000";return p;}const c=(document.cookie.match(/ui_lang=([a-z]+)/)||[])[1];if(c&&I18N[c])return c;const n=(navigator.language||"en").split("-")[0];return I18N[n]?n:"fa";}
@@ -215,6 +216,18 @@
             document.getElementById('otp').value = '';
             document.getElementById('stepOtp').classList.add('hidden');
             document.getElementById('stepForm').classList.remove('hidden');
+        }
+
+        async function resendOtp(){
+            if (!pendingEmail) return;
+            clearError();
+            try {
+                await fetch('/api/password/resend-otp', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ email: pendingEmail })
+                });
+            } catch {}
+            showError((I18N[currentLang()]||I18N.fa).resendSent || 'A new code is on its way.');
         }
 
         document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') submitRegister(); });

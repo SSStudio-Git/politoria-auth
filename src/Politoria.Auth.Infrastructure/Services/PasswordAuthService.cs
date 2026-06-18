@@ -25,6 +25,12 @@ public class PasswordAuthService(
     private static readonly TimeSpan ResetTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan InviteTtl = TimeSpan.FromHours(72);
 
+    // C3 — brute-force lockout: N consecutive bad passwords → cool-off window.
+    private const int MaxFailedLogins = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+    // Resend is allowed only while a login flow is recent (anti cold-spam).
+    private static readonly TimeSpan ResendWindow = TimeSpan.FromMinutes(15);
+
     private string Brand => config["Branding:ProductName"] ?? "Pishro";
     private string PublicUrl => (config["Auth:PublicUrl"] ?? "").TrimEnd('/');
 
@@ -53,12 +59,38 @@ public class PasswordAuthService(
     {
         var norm = email.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == norm, ct);
-        if (user is null || !user.IsActive || string.IsNullOrEmpty(user.PasswordHash)
-            || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        if (user is null || !user.IsActive || string.IsNullOrEmpty(user.PasswordHash))
             return false;
 
+        // Locked accounts behave like a bad password (generic — no enumeration).
+        if (user.IsLockedOut) return false;
+
+        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
+            user.RegisterFailedLogin(MaxFailedLogins, LockoutDuration);
+            await db.SaveChangesAsync(ct);
+            return false;
+        }
+
+        user.ResetFailedLogins(); // a correct password clears the lockout counter
         await IssueOtpAsync(user.Id, norm, ct);
         return true;
+    }
+
+    public async Task ResendOtpAsync(string email, CancellationToken ct)
+    {
+        var norm = email.Trim().ToLowerInvariant();
+        var user = await db.Users.FirstOrDefaultAsync(
+            u => u.Email != null && u.Email.ToLower() == norm && u.IsActive, ct);
+        if (user is null || string.IsNullOrEmpty(user.PasswordHash) || user.IsLockedOut) return; // silent
+
+        // Only resend if a login/signup flow was recently started for this email —
+        // stops the endpoint being used to cold-spam someone's inbox.
+        var since = DateTimeOffset.UtcNow - ResendWindow;
+        var recentFlow = await db.EmailOtpTokens.AnyAsync(t => t.Email == norm && t.CreatedAt > since, ct);
+        if (!recentFlow) return;
+
+        await IssueOtpAsync(user.Id, norm, ct);
     }
 
     // Create + email a fresh 6-digit sign-in OTP. Shared by login + self-signup.

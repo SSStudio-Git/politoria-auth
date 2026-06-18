@@ -41,6 +41,13 @@ public class User : BaseEntity
 
     public DateTimeOffset? LastLoginAt { get; private set; }
 
+    // req/004 C3 — brute-force lockout: count consecutive bad passwords; once the
+    // threshold is hit, LockedUntil suspends password login for a cool-off window.
+    public int FailedLoginCount { get; private set; }
+    public DateTimeOffset? LockedUntil { get; private set; }
+
+    public bool IsLockedOut => LockedUntil.HasValue && LockedUntil.Value > DateTimeOffset.UtcNow;
+
     public ICollection<PasskeyCredential> Passkeys { get; private set; } = new List<PasskeyCredential>();
 
     private User() { }
@@ -83,6 +90,27 @@ public class User : BaseEntity
     public void RecordLogin()
     {
         LastLoginAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    // req/004 C3 — record a failed password attempt; lock the account once the
+    // threshold is reached (counter resets so the next window starts clean).
+    public void RegisterFailedLogin(int threshold, TimeSpan lockDuration)
+    {
+        FailedLoginCount++;
+        if (FailedLoginCount >= threshold)
+        {
+            LockedUntil = DateTimeOffset.UtcNow.Add(lockDuration);
+            FailedLoginCount = 0;
+        }
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Clear the lockout counter — on a successful password verify or an admin unlock.</summary>
+    public void ResetFailedLogins()
+    {
+        FailedLoginCount = 0;
+        LockedUntil = null;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 

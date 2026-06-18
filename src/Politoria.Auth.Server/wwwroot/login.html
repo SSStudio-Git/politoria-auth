@@ -201,6 +201,7 @@
                     <span class="spinner" id="otpSpinner"></span>
                     <span id="otpText">Verify &amp; sign in</span>
                 </button>
+                <button class="link" id="resendBtn" onclick="resendOtp()">Resend code</button>
                 <button class="link" id="backToCredsBtn" onclick="backToCreds()">← Use a different account</button>
             </div>
         </div>
@@ -223,12 +224,12 @@
 
         // ── i18n ──────────────────────────────────────────────────────────
         const I18N = {
-          en: {title:"Sign In",subtitle:"Sign in to your account",tabPassword:"Email & Password",tabPasskey:"Passkey",emailLabel:"Email",passwordLabel:"Password",credsText:"Continue",forgotBtn:"Forgot your password?",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & sign in",backToCredsBtn:"← Use a different account",btnText:"Sign in with Passkey",registerLink:"Don't have an account? Register"},
-          fa: {title:"ورود",subtitle:"به حساب خود وارد شوید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",emailLabel:"ایمیل",passwordLabel:"گذرواژه",credsText:"ادامه",forgotBtn:"گذرواژه‌تان را فراموش کرده‌اید؟",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ورود",backToCredsBtn:"← استفاده از حسابی دیگر",btnText:"ورود با کلید عبور",registerLink:"حساب ندارید؟ ثبت‌نام کنید"},
-          ar: {title:"تسجيل الدخول",subtitle:"سجّل الدخول إلى حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",credsText:"متابعة",forgotBtn:"هل نسيت كلمة المرور؟",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وسجّل الدخول",backToCredsBtn:"← استخدام حساب آخر",btnText:"الدخول بمفتاح المرور",registerLink:"ليس لديك حساب؟ سجّل"},
-          az: {title:"گیریش",subtitle:"حسابینیزا داخیل اولون",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",emailLabel:"ایمیل",passwordLabel:"پاروْل",credsText:"داوام",forgotBtn:"پاروْلونوزو اونوتموسونوز؟",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و گیریش",backToCredsBtn:"← باشقا حساب ایشلَت",btnText:"گیریش آچاری ایله داخیل اول",registerLink:"حسابینیز یوخدور؟ قئیدیّاتدان کئچین"},
-          ku: {title:"چوونەژوورەوە",subtitle:"بچۆ ژوورەوە بۆ هەژمارەکەت",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",credsText:"بەردەوامبوون",forgotBtn:"وشەی نهێنیت لەبیرکردووە؟",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و چوونەژوورەوە",backToCredsBtn:"← هەژمارێکی تر بەکاربهێنە",btnText:"چوونەژوورەوە بە کلیل",registerLink:"هەژمارت نییە؟ خۆت تۆمار بکە"},
-          bal: {title:"درشُدگ",subtitle:"وتی حسابا درشُدگ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",emailLabel:"ایمیل",passwordLabel:"رمز",credsText:"دیمتر",forgotBtn:"وتی رمز شُمئے یاتا رفتگ؟",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و درشُدگ",backToCredsBtn:"← دگه حسابی استمال کن",btnText:"کلیدا درشُدگ",registerLink:"تئے حساب نیست؟ نام‌نویسی کن"},
+          en: {title:"Sign In",subtitle:"Sign in to your account",tabPassword:"Email & Password",tabPasskey:"Passkey",emailLabel:"Email",passwordLabel:"Password",credsText:"Continue",forgotBtn:"Forgot your password?",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & sign in",backToCredsBtn:"← Use a different account",btnText:"Sign in with Passkey",registerLink:"Don't have an account? Register",resendBtn:"Resend code",resendSent:"A new code is on its way."},
+          fa: {title:"ورود",subtitle:"به حساب خود وارد شوید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",emailLabel:"ایمیل",passwordLabel:"گذرواژه",credsText:"ادامه",forgotBtn:"گذرواژه‌تان را فراموش کرده‌اید؟",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ورود",backToCredsBtn:"← استفاده از حسابی دیگر",btnText:"ورود با کلید عبور",registerLink:"حساب ندارید؟ ثبت‌نام کنید",resendBtn:"ارسال دوبارهٔ کد",resendSent:"اگر کدتان منقضی شده، کد تازه‌ای فرستادیم."},
+          ar: {title:"تسجيل الدخول",subtitle:"سجّل الدخول إلى حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",credsText:"متابعة",forgotBtn:"هل نسيت كلمة المرور؟",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وسجّل الدخول",backToCredsBtn:"← استخدام حساب آخر",btnText:"الدخول بمفتاح المرور",registerLink:"ليس لديك حساب؟ سجّل",resendBtn:"إعادة إرسال الرمز",resendSent:"إن انتهت صلاحية رمزك، أرسلنا رمزًا جديدًا."},
+          az: {title:"گیریش",subtitle:"حسابینیزا داخیل اولون",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",emailLabel:"ایمیل",passwordLabel:"پاروْل",credsText:"داوام",forgotBtn:"پاروْلونوزو اونوتموسونوز؟",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و گیریش",backToCredsBtn:"← باشقا حساب ایشلَت",btnText:"گیریش آچاری ایله داخیل اول",registerLink:"حسابینیز یوخدور؟ قئیدیّاتدان کئچین",resendBtn:"کدو یئنیدن گؤنده‌ر",resendSent:"اگر کدینیز بیتیبسه، یئنی کد گؤنده‌ردیک."},
+          ku: {title:"چوونەژوورەوە",subtitle:"بچۆ ژوورەوە بۆ هەژمارەکەت",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",credsText:"بەردەوامبوون",forgotBtn:"وشەی نهێنیت لەبیرکردووە؟",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و چوونەژوورەوە",backToCredsBtn:"← هەژمارێکی تر بەکاربهێنە",btnText:"چوونەژوورەوە بە کلیل",registerLink:"هەژمارت نییە؟ خۆت تۆمار بکە",resendBtn:"کۆد دووبارە بنێرە",resendSent:"ئەگەر کۆدەکەت بەسەرچووە، کۆدێکی نوێمان نارد."},
+          bal: {title:"درشُدگ",subtitle:"وتی حسابا درشُدگ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",emailLabel:"ایمیل",passwordLabel:"رمز",credsText:"دیمتر",forgotBtn:"وتی رمز شُمئے یاتا رفتگ؟",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و درشُدگ",backToCredsBtn:"← دگه حسابی استمال کن",btnText:"کلیدا درشُدگ",registerLink:"تئے حساب نیست؟ نام‌نویسی کن",resendBtn:"کدا دگه روان کن",resendSent:"اگر تئی کد سر بوتگ، نوکیں کدے روان کرتگ."},
         };
         const RTL = ["fa","ar","az","ku","bal"];
         function currentLang() {
@@ -349,6 +350,18 @@
             document.getElementById('otp').value = '';
             document.getElementById('stepOtp').classList.add('hidden');
             document.getElementById('stepCreds').classList.remove('hidden');
+        }
+
+        async function resendOtp() {
+            if (!pendingEmail) return;
+            clearError();
+            try {
+                await fetch('/api/password/resend-otp', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: pendingEmail })
+                });
+            } catch { /* always succeed silently */ }
+            showError((I18N[currentLang()]||I18N.fa).resendSent || 'A new code is on its way.');
         }
 
         async function forgotPassword() {

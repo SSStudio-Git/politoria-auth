@@ -1,7 +1,9 @@
+using System.Threading.RateLimiting;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Politoria.Auth.Application.Services;
 using Politoria.Auth.Infrastructure.Persistence;
@@ -99,6 +101,27 @@ builder.Services.AddFido2(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// req/004 C3 — per-client rate limit on the password endpoints (brute-force defence
+// alongside the per-account lockout). Partition by the real client IP (X-Forwarded-For
+// first hop behind nginx), falling back to the socket IP.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+    {
+        var fwd = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var clientIp = !string.IsNullOrWhiteSpace(fwd)
+            ? fwd.Split(',')[0].Trim()
+            : httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        });
+    });
+});
 
 builder.Services.AddScoped<IPasskeyService, PasskeyService>();
 builder.Services.AddScoped<IClaimsEnrichmentService, ClaimsEnrichmentService>();
@@ -207,6 +230,7 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseStaticFiles();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
