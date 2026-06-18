@@ -210,7 +210,8 @@ app.Use(async (ctx, next) =>
 var brandName = builder.Configuration["Branding:ProductName"] ?? "Politoria";
 var templatedPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
-    "/login.html", "/register.html", "/invite/register.html", "/set-password.html"
+    "/login.html", "/register.html", "/invite/register.html",
+    "/invite/set-password.html", "/set-password.html"
 };
 app.Use(async (ctx, next) =>
 {

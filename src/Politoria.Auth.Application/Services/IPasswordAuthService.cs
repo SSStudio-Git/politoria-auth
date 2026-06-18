@@ -28,6 +28,13 @@ public interface IPasswordAuthService
     /// <summary>Set/replace the password using a one-time setup/reset token.</summary>
     Task<bool> SetPasswordAsync(string token, string newPassword, CancellationToken ct);
 
+    /// <summary>HRMS invite handoff: create-or-bind the User to the handoff's identity
+    /// id, set its password (no OTP — the signed handoff is the proof of invite), and
+    /// return the user to sign in. Mirrors the passkey-invite path. Null on a weak
+    /// password.</summary>
+    Task<SignedInUser?> SetPasswordFromInviteAsync(
+        Guid identityId, string displayName, string? email, string newPassword, CancellationToken ct);
+
     /// <summary>Forgot-password: always succeeds; emails a reset link if the user exists.</summary>
     Task RequestResetAsync(string email, CancellationToken ct);
 
