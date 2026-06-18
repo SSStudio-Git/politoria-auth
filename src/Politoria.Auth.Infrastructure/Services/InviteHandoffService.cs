@@ -19,7 +19,7 @@ public class InviteHandoffService(
     IConfiguration configuration,
     ILogger<InviteHandoffService> logger) : IInviteHandoffService
 {
-    private record Payload(string sub, string name, long exp);
+    private record Payload(string sub, string name, long exp, string? email = null);
 
     public InviteHandoff? Verify(string token)
     {
@@ -86,7 +86,7 @@ public class InviteHandoffService(
             return null;
         }
 
-        return new InviteHandoff(identityId, payload.name ?? "User");
+        return new InviteHandoff(identityId, payload.name ?? "User", payload.email);
     }
 
     private static byte[] Base64UrlDecode(string input)

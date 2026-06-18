@@ -143,6 +143,34 @@ public class PasswordAuthService(
         return true;
     }
 
+    public async Task<SignedInUser?> SetPasswordFromInviteAsync(
+        Guid identityId, string displayName, string? email, string newPassword, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8) return null;
+
+        var norm = string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+        // Bind the pishro-auth User to the HRMS identity id so OIDC `sub` matches
+        // the VerifiedIdentity. Find-or-create: a fresh invite has no User row yet,
+        // but be idempotent if the page is submitted twice or the id pre-exists.
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == identityId, ct);
+        if (user is null)
+        {
+            user = User.CreateWithId(identityId, displayName, norm);
+            db.Users.Add(user);
+        }
+        else if (norm is not null && string.IsNullOrEmpty(user.Email))
+        {
+            user.Update(email: norm);
+        }
+
+        user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(newPassword));
+        user.ResetFailedLogins();
+        await db.SaveChangesAsync(ct);
+
+        return new SignedInUser(user.Id, user.DisplayName, user.Email, user.Phone);
+    }
+
     public async Task RequestResetAsync(string email, CancellationToken ct)
     {
         var norm = email.Trim().ToLowerInvariant();

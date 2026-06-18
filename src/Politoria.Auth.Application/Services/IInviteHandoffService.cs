@@ -16,4 +16,4 @@ public interface IInviteHandoffService
     InviteHandoff? Verify(string token);
 }
 
-public record InviteHandoff(Guid IdentityId, string DisplayName);
+public record InviteHandoff(Guid IdentityId, string DisplayName, string? Email = null);

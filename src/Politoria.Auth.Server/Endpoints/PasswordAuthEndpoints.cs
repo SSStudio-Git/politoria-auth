@@ -83,6 +83,37 @@ public static class PasswordAuthEndpoints
             return Results.Ok(new { success = true, userId = user.UserId });
         });
 
+        // HRMS invite handoff (credential type = Password): the invitee sets their
+        // password against an HMAC-signed handoff token (carries the identity id +
+        // email). No OTP here — the signed handoff IS the proof of invite, mirroring
+        // how the passkey-invite path registers + signs in directly. Subsequent
+        // logins use the normal email+password+OTP flow.
+        group.MapPost("/invite-set", async (
+            JsonElement body, IPasswordAuthService svc, IInviteHandoffService handoffService,
+            HttpContext http, CancellationToken ct) =>
+        {
+            var token = body.TryGetProperty("handoff", out var ht) ? ht.GetString() : null;
+            var newPassword = body.TryGetProperty("newPassword", out var np) ? np.GetString() : null;
+            if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(newPassword))
+                return Results.BadRequest(new { error = "Handoff and a new password are required." });
+            if (!PasswordPolicy.IsAcceptable(newPassword, out var pwError))
+                return Results.BadRequest(new { error = pwError });
+
+            var handoff = handoffService.Verify(token);
+            if (handoff is null)
+                return Results.BadRequest(new { error = "Invalid or expired invitation link." });
+
+            var user = await svc.SetPasswordFromInviteAsync(
+                handoff.IdentityId, handoff.DisplayName, handoff.Email, newPassword, ct);
+            if (user is null)
+                return Results.BadRequest(new { error = "Could not set the password." });
+
+            var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone);
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+            await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+            return Results.Ok(new { success = true, userId = user.UserId });
+        });
+
         // First-time set + reset: token + new password.
         group.MapPost("/set", async (
             JsonElement body, IPasswordAuthService svc, CancellationToken ct) =>

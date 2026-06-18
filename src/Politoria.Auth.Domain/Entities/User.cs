@@ -60,6 +60,23 @@ public class User : BaseEntity
         };
     }
 
+    /// <summary>
+    /// Create a User bound to a caller-supplied Id — used by the HRMS invite
+    /// handoff so the pishro-auth User.Id equals the hrms_identity VerifiedIdentity
+    /// id (the OIDC <c>sub</c>). Mirrors the passkey-invite path, which sets the same
+    /// id on the User it creates at registration. The email is carried by the signed
+    /// handoff so a password invitee can sign in by email afterwards.
+    /// </summary>
+    public static User CreateWithId(Guid id, string displayName, string? email = null)
+    {
+        return new User
+        {
+            Id = id,
+            DisplayName = displayName,
+            Email = email,
+        };
+    }
+
     public void Update(string? displayName = null, string? nickname = null, string? firstName = null,
         string? lastName = null, string? email = null, string? phone = null,
         string? avatarUrl = null, string? bio = null)
