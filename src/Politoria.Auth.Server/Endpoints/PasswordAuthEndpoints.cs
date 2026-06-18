@@ -18,6 +18,26 @@ public static class PasswordAuthEndpoints
     {
         var group = app.MapGroup("/api/password");
 
+        // Public self-signup: create an email+password account → send confirmation OTP.
+        // Always returns requiresOtp (no enumeration); the portal's OIDC callback turns
+        // the first verified sign-in into a PendingVetting member.
+        group.MapPost("/register", async (
+            JsonElement body, IPasswordAuthService svc, CancellationToken ct) =>
+        {
+            var email = body.TryGetProperty("email", out var re) ? re.GetString()?.Trim() : null;
+            var password = body.TryGetProperty("password", out var rp) ? rp.GetString() : null;
+            var displayName = body.TryGetProperty("displayName", out var rd) ? rd.GetString()?.Trim() : null;
+            if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                return Results.BadRequest(new { error = "Name, email, and password are required." });
+            if (!email.Contains('@') || email.Length > 200)
+                return Results.BadRequest(new { error = "Enter a valid email address." });
+            if (password.Length < 8)
+                return Results.BadRequest(new { error = "Password must be at least 8 characters." });
+
+            await svc.RegisterAsync(email, password, displayName, ct);
+            return Results.Ok(new { requiresOtp = true, email });
+        });
+
         // Step 1: email + password → send OTP.
         group.MapPost("/login", async (
             JsonElement body, IPasswordAuthService svc, CancellationToken ct) =>

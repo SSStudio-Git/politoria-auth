@@ -8,110 +8,54 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0f;
-            color: #e4e4e7;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #0a0a0f; color: #e4e4e7; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
         }
         .card {
-            background: #18181b;
-            border: 1px solid #27272a;
-            border-radius: 12px;
-            padding: 2.5rem;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
+            background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+            padding: 2.5rem; width: 100%; max-width: 400px; text-align: center;
         }
-        .card h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #fafafa;
+        .card h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #fafafa; }
+        .card p.sub { color: #a1a1aa; font-size: 0.875rem; margin-bottom: 1.5rem; }
+        .tabs {
+            display: flex; gap: 0.25rem; background: #0f0f14; border: 1px solid #27272a;
+            border-radius: 8px; padding: 0.25rem; margin-bottom: 1.5rem;
         }
-        .card p {
-            color: #a1a1aa;
-            font-size: 0.875rem;
-            margin-bottom: 2rem;
+        .tab {
+            flex: 1; padding: 0.5rem; border: none; background: transparent; color: #a1a1aa;
+            font-size: 0.85rem; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.15s;
         }
-        .input-group {
-            margin-bottom: 1rem;
-            text-align: left;
+        .tab.active { background: #27272a; color: #fafafa; }
+        .field { text-align: left; margin-bottom: 1rem; }
+        .field label { display: block; font-size: 0.8rem; color: #a1a1aa; margin-bottom: 0.35rem; }
+        .input {
+            width: 100%; padding: 0.7rem 0.85rem; background: #0f0f14; border: 1px solid #27272a;
+            border-radius: 8px; color: #fafafa; font-size: 0.95rem; outline: none; transition: border-color 0.15s;
         }
-        .input-group label {
-            display: block;
-            font-size: 0.85rem;
-            color: #a1a1aa;
-            margin-bottom: 0.375rem;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 0.625rem 0.75rem;
-            background: #09090b;
-            border: 1px solid #27272a;
-            border-radius: 6px;
-            color: #fafafa;
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .input-group input:focus { border-color: #3b82f6; }
+        .input:focus { border-color: #3b82f6; }
+        .input.otp { text-align: center; letter-spacing: 0.5rem; font-size: 1.4rem; font-weight: 600; }
+        .hint { font-size: 0.72rem; color: #71717a; margin-top: 0.3rem; }
         .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            width: 100%;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;
+            padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500;
+            cursor: pointer; transition: background 0.2s;
         }
-        .btn-primary {
-            background: #3b82f6;
-            color: #fff;
-        }
+        .btn-primary { background: #3b82f6; color: #fff; }
         .btn-primary:hover { background: #2563eb; }
         .btn-primary:disabled { background: #1e3a5f; cursor: not-allowed; }
         .error {
-            background: #7f1d1d;
-            border: 1px solid #991b1b;
-            color: #fca5a5;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 0.85rem;
-            display: none;
-        }
-        .success {
-            background: #14532d;
-            border: 1px solid #166534;
-            color: #86efac;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 0.85rem;
-            display: none;
+            background: #7f1d1d; border: 1px solid #991b1b; color: #fca5a5; padding: 0.75rem;
+            border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; display: none;
         }
         .link {
-            display: block;
-            margin-top: 1.5rem;
-            color: #60a5fa;
-            text-decoration: none;
-            font-size: 0.875rem;
+            display: block; margin-top: 1.5rem; color: #60a5fa; text-decoration: none; font-size: 0.875rem;
+            background: none; border: none; cursor: pointer; width: 100%;
         }
         .link:hover { text-decoration: underline; }
+        .hidden { display: none !important; }
         .spinner {
-            display: none;
-            width: 18px;
-            height: 18px;
-            border: 2px solid #fff4;
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
+            display: none; width: 18px; height: 18px; border: 2px solid #fff4; border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -119,17 +63,64 @@
 <body>
     <div class="card">
         <h1 id="title">Create Account</h1>
-        <p id="subtitle">Register a passkey to create your account</p>
+        <p class="sub" id="subtitle">Create your account</p>
         <div class="error" id="error"></div>
-        <div class="success" id="success"></div>
-        <div class="input-group">
-            <label for="displayName" id="nameLabel">Display Name</label>
-            <input type="text" id="displayName" placeholder="Enter your name" />
+
+        <div class="tabs">
+            <button class="tab active" id="tabPassword" onclick="switchTab('password')">Email &amp; Password</button>
+            <button class="tab" id="tabPasskey" onclick="switchTab('passkey')">Passkey</button>
         </div>
-        <button class="btn btn-primary" id="registerBtn" onclick="startRegister()">
-            <span class="spinner" id="spinner"></span>
-            <span id="btnText">Create account with Passkey</span>
-        </button>
+
+        <!-- Email + password -->
+        <div id="panePassword">
+            <!-- Step 1: registration form -->
+            <div id="stepForm">
+                <div class="field">
+                    <label for="displayName" id="nameLabel">Display Name</label>
+                    <input class="input" id="displayName" type="text" autocomplete="name" placeholder="Enter your name">
+                </div>
+                <div class="field">
+                    <label for="email" id="emailLabel">Email</label>
+                    <input class="input" id="email" type="email" autocomplete="email" placeholder="you@example.com">
+                </div>
+                <div class="field">
+                    <label for="password" id="passwordLabel">Password</label>
+                    <input class="input" id="password" type="password" autocomplete="new-password" placeholder="••••••••">
+                    <div class="hint" id="passwordHint">At least 8 characters.</div>
+                </div>
+                <button class="btn btn-primary" id="createBtn" onclick="submitRegister()">
+                    <span class="spinner" id="createSpinner"></span>
+                    <span id="createText">Create account</span>
+                </button>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div id="stepOtp" class="hidden">
+                <p class="sub"><span id="otpSentPre">We sent a 6-digit code to </span><strong id="otpEmail"></strong><span id="otpSentPost">. Enter it below.</span></p>
+                <div class="field">
+                    <label for="otp" id="otpLabel">Verification code</label>
+                    <input class="input otp" id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
+                </div>
+                <button class="btn btn-primary" id="otpBtn" onclick="submitOtp()">
+                    <span class="spinner" id="otpSpinner"></span>
+                    <span id="otpText">Verify &amp; continue</span>
+                </button>
+                <button class="link" id="backBtn" onclick="backToForm()">← Start over</button>
+            </div>
+        </div>
+
+        <!-- Passkey -->
+        <div id="panePasskey" class="hidden">
+            <div class="field">
+                <label for="pkName" id="pkNameLabel">Display Name</label>
+                <input class="input" id="pkName" type="text" autocomplete="name" placeholder="Enter your name">
+            </div>
+            <button class="btn btn-primary" id="registerBtn" onclick="startPasskeyRegister()">
+                <span class="spinner" id="spinner"></span>
+                <span id="btnText">Create account with Passkey</span>
+            </button>
+        </div>
+
         <a id="loginLink" href="/login.html" class="link">Already have an account? Sign in</a>
         <div style="margin-top:18px;text-align:center;font-size:13px;opacity:.7" id="langBar"></div>
     </div>
@@ -139,95 +130,123 @@
         const { startRegistration } = SimpleWebAuthnBrowser;
 
         const I18N = {
-          en:{title:"Create Account",subtitle:"Register a passkey to create your account",nameLabel:"Display Name",namePlaceholder:"Enter your name",btnText:"Create account with Passkey",loginLink:"Already have an account? Sign in"},
-          fa:{title:"ساخت حساب",subtitle:"برای ساخت حساب، یک کلید عبور ثبت کنید",nameLabel:"نام نمایشی",namePlaceholder:"نام خود را وارد کنید",btnText:"ساخت حساب با کلید عبور",loginLink:"حساب دارید؟ وارد شوید"},
-          ar:{title:"إنشاء حساب",subtitle:"سجّل مفتاح مرور لإنشاء حسابك",nameLabel:"الاسم المعروض",namePlaceholder:"أدخل اسمك",btnText:"إنشاء حساب بمفتاح المرور",loginLink:"لديك حساب؟ سجّل الدخول"},
-          az:{title:"حساب یارات",subtitle:"حساب یاراتماق اوچون بیر گیریش آچاری قئیدّیاتدان کئچیرین",nameLabel:"گؤرسه‌نن آد",namePlaceholder:"آدینیزی داخیل ائدین",btnText:"گیریش آچاری ایله حساب یارات",loginLink:"حسابینیز وار؟ داخیل اولون"},
-          ku:{title:"دروستکردنی هەژمار",subtitle:"کلیلێکی چوونەژوورەوە تۆمار بکە بۆ دروستکردنی هەژمارەکەت",nameLabel:"ناوی پیشاندان",namePlaceholder:"ناوەکەت بنووسە",btnText:"دروستکردنی هەژمار بە کلیل",loginLink:"هەژمارت هەیە؟ بچۆ ژوورەوە"},
-          bal:{title:"حساب جوڑ کن",subtitle:"وتی حسابئے جوڑ کنگ آ یک درشُدگی کلید ثبت کن",nameLabel:"نمائشی نام",namePlaceholder:"وتی نام نبیس کن",btnText:"کلیدا حساب جوڑ کن",loginLink:"تئے حساب هست؟ درشُدگ کن"},
+          en:{title:"Create Account",subtitle:"Create your account",tabPassword:"Email & Password",tabPasskey:"Passkey",nameLabel:"Display Name",namePlaceholder:"Enter your name",emailLabel:"Email",passwordLabel:"Password",passwordHint:"At least 8 characters.",createText:"Create account",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & continue",backBtn:"← Start over",pkNameLabel:"Display Name",btnText:"Create account with Passkey",loginLink:"Already have an account? Sign in"},
+          fa:{title:"ساخت حساب",subtitle:"حساب خود را بسازید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",nameLabel:"نام نمایشی",namePlaceholder:"نام خود را وارد کنید",emailLabel:"ایمیل",passwordLabel:"گذرواژه",passwordHint:"حداقل ۸ نویسه.",createText:"ساخت حساب",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ادامه",backBtn:"← از نو شروع کن",pkNameLabel:"نام نمایشی",btnText:"ساخت حساب با کلید عبور",loginLink:"حساب دارید؟ وارد شوید"},
+          ar:{title:"إنشاء حساب",subtitle:"أنشئ حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",nameLabel:"الاسم المعروض",namePlaceholder:"أدخل اسمك",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",passwordHint:"٨ أحرف على الأقل.",createText:"إنشاء حساب",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وتابع",backBtn:"← ابدأ من جديد",pkNameLabel:"الاسم المعروض",btnText:"إنشاء حساب بمفتاح المرور",loginLink:"لديك حساب؟ سجّل الدخول"},
+          az:{title:"حساب یارات",subtitle:"حسابینیزی یارادین",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",nameLabel:"گؤرسه‌نن آد",namePlaceholder:"آدینیزی داخیل ائدین",emailLabel:"ایمیل",passwordLabel:"پاروْل",passwordHint:"ان آز ۸ ساده.",createText:"حساب یارات",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و داوام",backBtn:"← یئنیدن باشلا",pkNameLabel:"گؤرسه‌نن آد",btnText:"گیریش آچاری ایله حساب یارات",loginLink:"حسابینیز وار؟ داخیل اولون"},
+          ku:{title:"دروستکردنی هەژمار",subtitle:"هەژمارەکەت دروست بکە",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",nameLabel:"ناوی پیشاندان",namePlaceholder:"ناوەکەت بنووسە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",passwordHint:"بەلایەنی کەم ٨ نووسە.",createText:"دروستکردنی هەژمار",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و بەردەوامبوون",backBtn:"← لە سەرەتاوە دەستپێبکە",pkNameLabel:"ناوی پیشاندان",btnText:"دروستکردنی هەژمار بە کلیل",loginLink:"هەژمارت هەیە؟ بچۆ ژوورەوە"},
+          bal:{title:"حساب جوڑ کن",subtitle:"وتی حسابا جوڑ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",nameLabel:"نمائشی نام",namePlaceholder:"وتی نام نبیس کن",emailLabel:"ایمیل",passwordLabel:"رمز",passwordHint:"کم‌ترین ۸ هرف.",createText:"حساب جوڑ کن",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و دیمتر",backBtn:"← سرا چه شروع کن",pkNameLabel:"نمائشی نام",btnText:"کلیدا حساب جوڑ کن",loginLink:"تئے حساب هست؟ درشُدگ کن"},
         };
         const RTL = ["fa","ar","az","ku","bal"];
         function currentLang(){const p=new URLSearchParams(location.search).get("lang");if(p&&I18N[p]){document.cookie="ui_lang="+p+";path=/;max-age=31536000";return p;}const c=(document.cookie.match(/ui_lang=([a-z]+)/)||[])[1];if(c&&I18N[c])return c;const n=(navigator.language||"en").split("-")[0];return I18N[n]?n:"fa";}
-        (function applyI18n(){const lang=currentLang();const m=I18N[lang]||I18N.fa;document.documentElement.lang=lang;document.documentElement.dir=RTL.includes(lang)?"rtl":"ltr";for(const id in m){if(id==="namePlaceholder")continue;const el=document.getElementById(id);if(el)el.textContent=m[id];}const np=document.getElementById("displayName");if(np)np.placeholder=m.namePlaceholder;const names={en:"English",fa:"فارسی",ar:"العربية",az:"تۆرکجه",ku:"کوردی",bal:"بلۏچی"};const bar=document.getElementById("langBar");if(bar)bar.innerHTML=Object.keys(I18N).map(l=>{if(l===lang)return "<b>"+names[l]+"</b>";const u=new URL(location.href);u.searchParams.set("lang",l);return '<a href="'+u.pathname+u.search+'" style="color:inherit">'+names[l]+"</a>";}).join(" · ");})();
+        function applyI18n(){const lang=currentLang();const m=I18N[lang]||I18N.fa;document.documentElement.lang=lang;document.documentElement.dir=RTL.includes(lang)?"rtl":"ltr";for(const id in m){if(id==="namePlaceholder")continue;const el=document.getElementById(id);if(el)el.textContent=m[id];}const ph=m.namePlaceholder;["displayName","pkName"].forEach(i=>{const el=document.getElementById(i);if(el)el.placeholder=ph;});const names={en:"English",fa:"فارسی",ar:"العربية",az:"تۆرکجه",ku:"کوردی",bal:"بلۏچی"};const bar=document.getElementById("langBar");if(bar)bar.innerHTML=Object.keys(I18N).map(l=>{if(l===lang)return "<b>"+names[l]+"</b>";const u=new URL(location.href);u.searchParams.set("lang",l);return '<a href="'+u.pathname+u.search+'" style="color:inherit">'+names[l]+"</a>";}).join(" · ");}
+        applyI18n();
 
-        // Pass returnUrl to login link
-        (function() {
-            const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
-            if (returnUrl) {
-                document.getElementById('loginLink').href =
-                    '/login.html?returnUrl=' + encodeURIComponent(returnUrl);
-            }
-        })();
+        function getReturnUrl(){return new URLSearchParams(window.location.search).get('returnUrl') || '/';}
+        (function(){const r=getReturnUrl();if(r!=='/')document.getElementById('loginLink').href='/login.html?returnUrl='+encodeURIComponent(r);})();
 
-        function showError(msg) {
-            const el = document.getElementById('error');
-            el.textContent = msg;
-            el.style.display = 'block';
-            document.getElementById('success').style.display = 'none';
+        const errorEl = document.getElementById('error');
+        function showError(msg){errorEl.textContent=msg;errorEl.style.display='block';}
+        function clearError(){errorEl.style.display='none';}
+        function setBusy(btn,spinner,busy){btn.disabled=busy;spinner.style.display=busy?'inline-block':'none';}
+
+        function switchTab(which){
+            clearError();
+            document.getElementById('tabPassword').classList.toggle('active', which==='password');
+            document.getElementById('tabPasskey').classList.toggle('active', which==='passkey');
+            document.getElementById('panePassword').classList.toggle('hidden', which!=='password');
+            document.getElementById('panePasskey').classList.toggle('hidden', which!=='passkey');
         }
 
-        function showSuccess(msg) {
-            const el = document.getElementById('success');
-            el.textContent = msg;
-            el.style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-        }
+        // ---- Email + password self-signup ----
+        let pendingEmail = null;
 
-        function setLoading(loading) {
-            const btn = document.getElementById('registerBtn');
-            const spinner = document.getElementById('spinner');
-            const text = document.getElementById('btnText');
-            btn.disabled = loading;
-            spinner.style.display = loading ? 'inline-block' : 'none';
-            text.textContent = loading ? 'Registering...' : 'Create account with Passkey';
-        }
-
-        async function startRegister() {
-            const errorEl = document.getElementById('error');
-            errorEl.style.display = 'none';
-            setLoading(true);
-
+        async function submitRegister(){
+            clearError();
             const displayName = document.getElementById('displayName').value.trim();
-            if (!displayName) {
-                showError('Please enter a display name.');
-                setLoading(false);
-                return;
-            }
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            if (!displayName || !email || !password) { showError('Enter your name, email, and password.'); return; }
+            if (password.length < 8) { showError('Password must be at least 8 characters.'); return; }
 
+            const btn = document.getElementById('createBtn');
+            setBusy(btn, document.getElementById('createSpinner'), true);
             try {
-                // Begin
+                const res = await fetch('/api/password/register', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ displayName, email, password })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Registration failed.');
+                pendingEmail = email;
+                document.getElementById('otpEmail').textContent = email;
+                document.getElementById('stepForm').classList.add('hidden');
+                document.getElementById('stepOtp').classList.remove('hidden');
+                document.getElementById('otp').focus();
+            } catch (err) {
+                showError(err.message || 'An unexpected error occurred.');
+            } finally {
+                setBusy(btn, document.getElementById('createSpinner'), false);
+            }
+        }
+
+        async function submitOtp(){
+            clearError();
+            const code = document.getElementById('otp').value.trim();
+            if (code.length !== 6) { showError('Enter the 6-digit code.'); return; }
+            const btn = document.getElementById('otpBtn');
+            setBusy(btn, document.getElementById('otpSpinner'), true);
+            try {
+                const res = await fetch('/api/password/verify-otp', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ email: pendingEmail, code })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Invalid code.');
+                window.location.href = getReturnUrl();
+            } catch (err) {
+                showError(err.message || 'An unexpected error occurred.');
+                setBusy(btn, document.getElementById('otpSpinner'), false);
+            }
+        }
+
+        function backToForm(){
+            clearError(); pendingEmail = null;
+            document.getElementById('otp').value = '';
+            document.getElementById('stepOtp').classList.add('hidden');
+            document.getElementById('stepForm').classList.remove('hidden');
+        }
+
+        document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') submitRegister(); });
+        document.getElementById('otp').addEventListener('keydown', e => { if (e.key === 'Enter') submitOtp(); });
+
+        // ---- Passkey (unchanged behaviour) ----
+        function setLoading(loading){
+            const btn=document.getElementById('registerBtn');
+            btn.disabled=loading;
+            document.getElementById('spinner').style.display=loading?'inline-block':'none';
+        }
+        async function startPasskeyRegister(){
+            clearError(); setLoading(true);
+            const displayName = document.getElementById('pkName').value.trim();
+            if (!displayName) { showError('Please enter a display name.'); setLoading(false); return; }
+            try {
                 const beginRes = await fetch('/api/passkey/register/begin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ displayName })
+                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ displayName })
                 });
                 const beginData = await beginRes.json();
                 if (!beginRes.ok) throw new Error(beginData.error || 'Failed to begin registration');
-
-                // WebAuthn
                 const attestationResponse = await startRegistration({ optionsJSON: beginData.options });
-
-                // Complete
                 const completeRes = await fetch('/api/passkey/register/complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        challengeId: beginData.challengeId,
-                        attestationResponse
-                    })
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ challengeId: beginData.challengeId, attestationResponse })
                 });
                 const completeData = await completeRes.json();
                 if (!completeRes.ok) throw new Error(completeData.error || 'Registration failed');
-
-                showSuccess('Account created! Redirecting...');
-                const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/';
-                setTimeout(() => { window.location.href = returnUrl; }, 800);
+                window.location.href = getReturnUrl();
             } catch (err) {
-                if (err.name === 'NotAllowedError') {
-                    showError('Registration was cancelled or not allowed.');
-                } else {
-                    showError(err.message || 'An unexpected error occurred.');
-                }
+                if (err.name === 'NotAllowedError') showError('Registration was cancelled or not allowed.');
+                else showError(err.message || 'An unexpected error occurred.');
                 setLoading(false);
             }
         }

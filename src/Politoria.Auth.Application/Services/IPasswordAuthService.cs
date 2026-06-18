@@ -2,10 +2,17 @@ namespace Politoria.Auth.Application.Services;
 
 /// <summary>
 /// req/004 — email + password authentication with a mandatory email-OTP second
-/// step. Account creation stays invite/admin-only (see <see cref="IssueSetupInviteAsync"/>).
+/// step. Admins can invite (see <see cref="IssueSetupInviteAsync"/>); visitors can
+/// also self-register (<see cref="RegisterAsync"/>) — both land on the same OTP
+/// confirmation, and the portal's OIDC callback creates the PendingVetting member.
 /// </summary>
 public interface IPasswordAuthService
 {
+    /// <summary>Public self-signup: create an email+password account and send a
+    /// confirmation OTP. Returns nothing (no enumeration) — if the email already
+    /// exists, emails a "you already have an account" notice instead of creating one.</summary>
+    Task RegisterAsync(string email, string password, string displayName, CancellationToken ct);
+
     /// <summary>Verify email+password; on success send an OTP. Returns true when an
     /// OTP was sent, false for any failure (generic — no enumeration).</summary>
     Task<bool> RequestLoginAsync(string email, string password, CancellationToken ct);

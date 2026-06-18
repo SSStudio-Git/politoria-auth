@@ -28,6 +28,27 @@ public class PasswordAuthService(
     private string Brand => config["Branding:ProductName"] ?? "Pishro";
     private string PublicUrl => (config["Auth:PublicUrl"] ?? "").TrimEnd('/');
 
+    public async Task RegisterAsync(string email, string password, string displayName, CancellationToken ct)
+    {
+        var norm = email.Trim().ToLowerInvariant();
+
+        // No enumeration: respond identically whether or not the email exists. If it
+        // does, send a heads-up (sign in / reset) rather than creating a second account.
+        if (await db.Users.AnyAsync(u => u.Email != null && u.Email.ToLower() == norm, ct))
+        {
+            await PublishEmail(norm, $"You already have a {Brand} account",
+                $"<p>Someone tried to register a {Brand} account with this email, but one already exists.</p><p>If that was you, just sign in — or reset your password if you've forgotten it.</p>",
+                $"You already have a {Brand} account. Sign in, or reset your password.", ct);
+            return;
+        }
+
+        var user = User.Create(displayName.Trim());
+        user.Update(email: norm);
+        user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(password));
+        db.Users.Add(user);
+        await IssueOtpAsync(user.Id, norm, ct);
+    }
+
     public async Task<bool> RequestLoginAsync(string email, string password, CancellationToken ct)
     {
         var norm = email.Trim().ToLowerInvariant();
@@ -36,14 +57,20 @@ public class PasswordAuthService(
             || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             return false;
 
+        await IssueOtpAsync(user.Id, norm, ct);
+        return true;
+    }
+
+    // Create + email a fresh 6-digit sign-in OTP. Shared by login + self-signup.
+    private async Task IssueOtpAsync(Guid userId, string email, CancellationToken ct)
+    {
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
-        db.EmailOtpTokens.Add(EmailOtpToken.Create(user.Id, norm, code, OtpTtl));
+        db.EmailOtpTokens.Add(EmailOtpToken.Create(userId, email, code, OtpTtl));
         await db.SaveChangesAsync(ct);
 
-        await PublishEmail(user.Email!, $"Your {Brand} sign-in code",
+        await PublishEmail(email, $"Your {Brand} sign-in code",
             $"<p>Your {Brand} sign-in code is <strong>{code}</strong>.</p><p>It expires in 5 minutes. If you didn't try to sign in, you can ignore this email.</p>",
             $"Your {Brand} sign-in code is {code}. It expires in 5 minutes.", ct);
-        return true;
     }
 
     public async Task<SignedInUser?> VerifyOtpAsync(string email, string code, CancellationToken ct)
