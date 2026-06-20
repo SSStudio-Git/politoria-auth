@@ -36,6 +36,10 @@ builder.Services.AddOpenIddict()
         options.AllowAuthorizationCodeFlow()
                .RequireProofKeyForCodeExchange();
 
+        // Refresh-token flow: lets the portal renew an expired access token
+        // (requested via the offline_access scope) without forcing a re-login.
+        options.AllowRefreshTokenFlow();
+
         // Service-to-service: HRMS Identity calls /api/admin/users/{id} with a
         // bearer token instead of the legacy X-Admin-Key header. The hrms-admin
         // confidential client uses this grant; requested scope is one of the
