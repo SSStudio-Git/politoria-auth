@@ -102,6 +102,10 @@ public class ClientSeeder(
                 OpenIddictConstants.Permissions.Endpoints.Token,
                 OpenIddictConstants.Permissions.Endpoints.EndSession,
                 OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                // Allow the portal to keep a long-lived session alive via refresh
+                // tokens (requested with the offline_access scope) instead of the
+                // access token simply expiring ~1h after login.
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OpenId,
                 OpenIddictConstants.Permissions.Scopes.Profile,

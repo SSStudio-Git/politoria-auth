@@ -170,6 +170,24 @@ public static class ConnectEndpoints
             return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
+        if (request.IsRefreshTokenGrantType())
+        {
+            // Renew an access token from a valid refresh token. OpenIddict
+            // reconstructs the principal (with its original scopes/claims) from
+            // the refresh token; we just recompute destinations and re-issue —
+            // a fresh access token plus a rotated refresh token.
+            var result = await httpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            var principal = result.Principal
+                ?? throw new InvalidOperationException("The refresh token is no longer valid.");
+
+            foreach (var claim in principal.Claims)
+            {
+                claim.SetDestinations(GetDestinations(claim, principal));
+            }
+
+            return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
 
