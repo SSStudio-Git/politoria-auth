@@ -113,6 +113,13 @@ public class ClaimsEnrichmentService(
                 if (vettingResponse is not null && !string.IsNullOrEmpty(vettingResponse.VettingStatus))
                     claims.Add(new Claim("vetting_status", vettingResponse.VettingStatus));
             }
+            catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Expected: identities without a verified-identity row (e.g. invite-only
+                // or IAM-only users) have no vetting status. Not an error — leave the
+                // claim absent (the vetting middleware treats absent as "not blocked").
+                logger.LogDebug("No verified-identity vetting status for user {UserId} (404)", userId);
+            }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to fetch vetting status from HRMS Identity for user {UserId}", userId);
