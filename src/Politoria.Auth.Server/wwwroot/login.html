@@ -135,6 +135,16 @@
             font-size: 0.85rem;
             display: none;
         }
+        .notice {
+            background: #064e3b;
+            border: 1px solid #065f46;
+            color: #6ee7b7;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            display: none;
+        }
         .link {
             display: block;
             margin-top: 1.5rem;
@@ -188,6 +198,11 @@
                     <span id="credsText">Continue</span>
                 </button>
                 <button class="link" id="forgotBtn" onclick="forgotPassword()">Forgot your password?</button>
+                <div id="forgotConfirm" class="hidden" style="margin-top:1rem;">
+                    <p id="forgotPrompt" style="font-size:0.875rem;color:#a1a1aa;margin-bottom:0.75rem;"></p>
+                    <button class="btn btn-primary" id="forgotSendBtn" onclick="sendForgot()">Send reset link</button>
+                    <button class="link" id="forgotCancel" onclick="cancelForgot()">Cancel</button>
+                </div>
             </div>
 
             <!-- Step 2: OTP -->
@@ -224,12 +239,12 @@
 
         // ── i18n ──────────────────────────────────────────────────────────
         const I18N = {
-          en: {title:"Sign In",subtitle:"Sign in to your account",tabPassword:"Email & Password",tabPasskey:"Passkey",emailLabel:"Email",passwordLabel:"Password",credsText:"Continue",forgotBtn:"Forgot your password?",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & sign in",backToCredsBtn:"← Use a different account",btnText:"Sign in with Passkey",registerLink:"Don't have an account? Register",resendBtn:"Resend code",resendSent:"A new code is on its way."},
-          fa: {title:"ورود",subtitle:"به حساب خود وارد شوید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",emailLabel:"ایمیل",passwordLabel:"گذرواژه",credsText:"ادامه",forgotBtn:"گذرواژه‌تان را فراموش کرده‌اید؟",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ورود",backToCredsBtn:"← استفاده از حسابی دیگر",btnText:"ورود با کلید عبور",registerLink:"حساب ندارید؟ ثبت‌نام کنید",resendBtn:"ارسال دوبارهٔ کد",resendSent:"اگر کدتان منقضی شده، کد تازه‌ای فرستادیم."},
-          ar: {title:"تسجيل الدخول",subtitle:"سجّل الدخول إلى حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",credsText:"متابعة",forgotBtn:"هل نسيت كلمة المرور؟",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وسجّل الدخول",backToCredsBtn:"← استخدام حساب آخر",btnText:"الدخول بمفتاح المرور",registerLink:"ليس لديك حساب؟ سجّل",resendBtn:"إعادة إرسال الرمز",resendSent:"إن انتهت صلاحية رمزك، أرسلنا رمزًا جديدًا."},
-          az: {title:"گیریش",subtitle:"حسابینیزا داخیل اولون",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",emailLabel:"ایمیل",passwordLabel:"پاروْل",credsText:"داوام",forgotBtn:"پاروْلونوزو اونوتموسونوز؟",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و گیریش",backToCredsBtn:"← باشقا حساب ایشلَت",btnText:"گیریش آچاری ایله داخیل اول",registerLink:"حسابینیز یوخدور؟ قئیدیّاتدان کئچین",resendBtn:"کدو یئنیدن گؤنده‌ر",resendSent:"اگر کدینیز بیتیبسه، یئنی کد گؤنده‌ردیک."},
-          ku: {title:"چوونەژوورەوە",subtitle:"بچۆ ژوورەوە بۆ هەژمارەکەت",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",credsText:"بەردەوامبوون",forgotBtn:"وشەی نهێنیت لەبیرکردووە؟",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و چوونەژوورەوە",backToCredsBtn:"← هەژمارێکی تر بەکاربهێنە",btnText:"چوونەژوورەوە بە کلیل",registerLink:"هەژمارت نییە؟ خۆت تۆمار بکە",resendBtn:"کۆد دووبارە بنێرە",resendSent:"ئەگەر کۆدەکەت بەسەرچووە، کۆدێکی نوێمان نارد."},
-          bal: {title:"درشُدگ",subtitle:"وتی حسابا درشُدگ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",emailLabel:"ایمیل",passwordLabel:"رمز",credsText:"دیمتر",forgotBtn:"وتی رمز شُمئے یاتا رفتگ؟",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و درشُدگ",backToCredsBtn:"← دگه حسابی استمال کن",btnText:"کلیدا درشُدگ",registerLink:"تئے حساب نیست؟ نام‌نویسی کن",resendBtn:"کدا دگه روان کن",resendSent:"اگر تئی کد سر بوتگ، نوکیں کدے روان کرتگ."},
+          en: {title:"Sign In",subtitle:"Sign in to your account",tabPassword:"Email & Password",tabPasskey:"Passkey",emailLabel:"Email",passwordLabel:"Password",credsText:"Continue",forgotBtn:"Forgot your password?",otpSentPre:"We sent a 6-digit code to ",otpSentPost:". Enter it below.",otpLabel:"Verification code",otpText:"Verify & sign in",backToCredsBtn:"← Use a different account",btnText:"Sign in with Passkey",registerLink:"Don't have an account? Register",resendBtn:"Resend code",resendSent:"A new code is on its way.",forgotConfirmPre:"Send a reset link to ",forgotConfirmPost:"?",forgotSendBtn:"Send reset link",forgotCancel:"Cancel",forgotNeedEmail:"Enter your email above first.",forgotSent:"If an account exists for that email, a reset link is on its way."},
+          fa: {title:"ورود",subtitle:"به حساب خود وارد شوید",tabPassword:"ایمیل و گذرواژه",tabPasskey:"کلید عبور",emailLabel:"ایمیل",passwordLabel:"گذرواژه",credsText:"ادامه",forgotBtn:"گذرواژه‌تان را فراموش کرده‌اید؟",otpSentPre:"یک کد ۶ رقمی به ",otpSentPost:" فرستادیم. آن را وارد کنید.",otpLabel:"کد تأیید",otpText:"تأیید و ورود",backToCredsBtn:"← استفاده از حسابی دیگر",btnText:"ورود با کلید عبور",registerLink:"حساب ندارید؟ ثبت‌نام کنید",resendBtn:"ارسال دوبارهٔ کد",resendSent:"اگر کدتان منقضی شده، کد تازه‌ای فرستادیم.",forgotConfirmPre:"ارسال پیوند بازنشانی به ",forgotConfirmPost:"؟",forgotSendBtn:"ارسال پیوند بازنشانی",forgotCancel:"انصراف",forgotNeedEmail:"ابتدا ایمیل خود را در کادر بالا وارد کنید.",forgotSent:"اگر حسابی با این ایمیل وجود داشته باشد، پیوند بازنشانی در راه است."},
+          ar: {title:"تسجيل الدخول",subtitle:"سجّل الدخول إلى حسابك",tabPassword:"البريد وكلمة المرور",tabPasskey:"مفتاح المرور",emailLabel:"البريد الإلكتروني",passwordLabel:"كلمة المرور",credsText:"متابعة",forgotBtn:"هل نسيت كلمة المرور؟",otpSentPre:"أرسلنا رمزًا من 6 أرقام إلى ",otpSentPost:". أدخله أدناه.",otpLabel:"رمز التحقق",otpText:"تحقّق وسجّل الدخول",backToCredsBtn:"← استخدام حساب آخر",btnText:"الدخول بمفتاح المرور",registerLink:"ليس لديك حساب؟ سجّل",resendBtn:"إعادة إرسال الرمز",resendSent:"إن انتهت صلاحية رمزك، أرسلنا رمزًا جديدًا.",forgotConfirmPre:"إرسال رابط إعادة التعيين إلى ",forgotConfirmPost:"؟",forgotSendBtn:"إرسال رابط إعادة التعيين",forgotCancel:"إلغاء",forgotNeedEmail:"أدخل بريدك الإلكتروني في الأعلى أولاً.",forgotSent:"إذا كان هناك حساب بهذا البريد، فإن رابط إعادة التعيين في طريقه إليك."},
+          az: {title:"گیریش",subtitle:"حسابینیزا داخیل اولون",tabPassword:"ایمیل و پاروْل",tabPasskey:"گیریش آچاری",emailLabel:"ایمیل",passwordLabel:"پاروْل",credsText:"داوام",forgotBtn:"پاروْلونوزو اونوتموسونوز؟",otpSentPre:"بیر ۶ رقملی کد گؤنده‌ریلدی ",otpSentPost:". آلتدا داخیل ائدین.",otpLabel:"تأیید کدو",otpText:"تأیید و گیریش",backToCredsBtn:"← باشقا حساب ایشلَت",btnText:"گیریش آچاری ایله داخیل اول",registerLink:"حسابینیز یوخدور؟ قئیدیّاتدان کئچین",resendBtn:"کدو یئنیدن گؤنده‌ر",resendSent:"اگر کدینیز بیتیبسه، یئنی کد گؤنده‌ردیک.",forgotConfirmPre:"بازنشانی لینکی گؤنده‌ریلسین ",forgotConfirmPost:"؟",forgotSendBtn:"بازنشانی لینکی گؤنده‌ر",forgotCancel:"لغو",forgotNeedEmail:"اوّل یوخاریدا ایمیلینیزی داخیل ائدین.",forgotSent:"اگر بو ایمیل‌له بیر حساب اولسا، بازنشانی لینکی گؤنده‌ریله‌جک."},
+          ku: {title:"چوونەژوورەوە",subtitle:"بچۆ ژوورەوە بۆ هەژمارەکەت",tabPassword:"ئیمەیل و وشەی نهێنی",tabPasskey:"کلیلی چوونەژوورەوە",emailLabel:"ئیمەیل",passwordLabel:"وشەی نهێنی",credsText:"بەردەوامبوون",forgotBtn:"وشەی نهێنیت لەبیرکردووە؟",otpSentPre:"کۆدێکی ٦ ژمارەییمان نارد بۆ ",otpSentPost:". لە خوارەوە بینووسە.",otpLabel:"کۆدی پشتڕاستکردنەوە",otpText:"پشتڕاستکردنەوە و چوونەژوورەوە",backToCredsBtn:"← هەژمارێکی تر بەکاربهێنە",btnText:"چوونەژوورەوە بە کلیل",registerLink:"هەژمارت نییە؟ خۆت تۆمار بکە",resendBtn:"کۆد دووبارە بنێرە",resendSent:"ئەگەر کۆدەکەت بەسەرچووە، کۆدێکی نوێمان نارد.",forgotConfirmPre:"ناردنی بەستەری ڕێکخستنەوە بۆ ",forgotConfirmPost:"؟",forgotSendBtn:"بەستەری ڕێکخستنەوە بنێرە",forgotCancel:"هەڵوەشاندنەوە",forgotNeedEmail:"سەرەتا ئیمەیلەکەت لە سەرەوە بنووسە.",forgotSent:"ئەگەر هەژمارێک بەم ئیمەیلە هەبێت، بەستەری ڕێکخستنەوە دەنێردرێت."},
+          bal: {title:"درشُدگ",subtitle:"وتی حسابا درشُدگ کن",tabPassword:"ایمیل و رمز",tabPasskey:"درشُدگی کلید",emailLabel:"ایمیل",passwordLabel:"رمز",credsText:"دیمتر",forgotBtn:"وتی رمز شُمئے یاتا رفتگ؟",otpSentPre:"یک ۶ رقمی‌ین کد روان کرتگ ",otpSentPost:". اِئے را تہا نبیس کن.",otpLabel:"تصدیقی کد",otpText:"تصدیق و درشُدگ",backToCredsBtn:"← دگه حسابی استمال کن",btnText:"کلیدا درشُدگ",registerLink:"تئے حساب نیست؟ نام‌نویسی کن",resendBtn:"کدا دگه روان کن",resendSent:"اگر تئی کد سر بوتگ، نوکیں کدے روان کرتگ.",forgotConfirmPre:"بازنشانی لینک روان بہ ",forgotConfirmPost:"؟",forgotSendBtn:"بازنشانی لینک روان کن",forgotCancel:"لغو",forgotNeedEmail:"اول وتی ایمیلا بالا تہا نبیس کن.",forgotSent:"اگر اے ایمیلا حسابے ہست بیت، بازنشانی لینکے روان بیت."},
         };
         const RTL = ["fa","ar","az","ku","bal"];
         function currentLang() {
@@ -273,6 +288,12 @@
         const errorEl = document.getElementById('error');
         function showError(msg) {
             errorEl.textContent = msg;
+            errorEl.className = 'error';
+            errorEl.style.display = 'block';
+        }
+        function showNotice(msg) {
+            errorEl.textContent = msg;
+            errorEl.className = 'notice';
             errorEl.style.display = 'block';
         }
         function clearError() { errorEl.style.display = 'none'; }
@@ -361,21 +382,49 @@
                     body: JSON.stringify({ email: pendingEmail })
                 });
             } catch { /* always succeed silently */ }
-            showError((I18N[currentLang()]||I18N.fa).resendSent || 'A new code is on its way.');
+            showNotice((I18N[currentLang()]||I18N.fa).resendSent || 'A new code is on its way.');
         }
 
-        async function forgotPassword() {
+        // Step 1: clicking "Forgot your password?" reveals an explicit confirm
+        // panel that names the target email (rather than sending silently).
+        function forgotPassword() {
             clearError();
+            const t = I18N[currentLang()] || I18N.fa;
             const email = document.getElementById('email').value.trim();
-            if (!email) { showError('Enter your email above first, then tap “Forgot your password?”.'); return; }
+            if (!email) {
+                showError(t.forgotNeedEmail || 'Enter your email above first.');
+                document.getElementById('email').focus();
+                return;
+            }
+            document.getElementById('forgotPrompt').textContent =
+                (t.forgotConfirmPre || 'Send a reset link to ') + email + (t.forgotConfirmPost || '?');
+            document.getElementById('forgotBtn').classList.add('hidden');
+            document.getElementById('credsBtn').classList.add('hidden');
+            document.getElementById('forgotConfirm').classList.remove('hidden');
+        }
+
+        // Step 2: actually request the reset, then show a (green) confirmation.
+        async function sendForgot() {
+            clearError();
+            const t = I18N[currentLang()] || I18N.fa;
+            const email = document.getElementById('email').value.trim();
             try {
                 await fetch('/api/password/forgot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
                 });
-            } catch { /* always succeed silently */ }
-            showError('If an account exists for that email, a reset link is on its way.');
+            } catch { /* always succeed silently — no account enumeration */ }
+            document.getElementById('forgotConfirm').classList.add('hidden');
+            document.getElementById('credsBtn').classList.remove('hidden');
+            showNotice(t.forgotSent || 'If an account exists for that email, a reset link is on its way.');
+        }
+
+        function cancelForgot() {
+            clearError();
+            document.getElementById('forgotConfirm').classList.add('hidden');
+            document.getElementById('forgotBtn').classList.remove('hidden');
+            document.getElementById('credsBtn').classList.remove('hidden');
         }
 
         document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') submitCreds(); });
