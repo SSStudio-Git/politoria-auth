@@ -111,6 +111,16 @@ public class ClientSeeder(
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Phone,
+                // The portal needs these as much as the ERP does. Without
+                // vetting_status a portal token carries no membership fact at
+                // all, so every surface that gates on it refused every portal
+                // user: an approved member opening a direct message was told
+                // "vetting_pending", which made member-to-member messaging
+                // impossible by construction rather than by policy. `roles`
+                // rides along because the same tokens cannot otherwise tell an
+                // admin from an ordinary member.
+                OpenIddictConstants.Permissions.Prefixes.Scope + "roles",
+                OpenIddictConstants.Permissions.Prefixes.Scope + "vetting_status",
             },
             Requirements =
             {
