@@ -18,6 +18,7 @@ public class ClaimsEnrichmentService(
 {
     private record RolesResponse(string[] Roles, string? VettingStatus, Guid[]? TenantIds, string[]? Permissions);
     private record VettingStatusResponse(string VettingStatus);
+    private record MemberStatusResponse(string? Status);
 
     public async Task<IReadOnlyList<Claim>> GetEnrichedClaimsAsync(Guid userId, CancellationToken ct = default)
     {
@@ -123,6 +124,40 @@ public class ClaimsEnrichmentService(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to fetch vetting status from HRMS Identity for user {UserId}", userId);
+            }
+        }
+
+        // Third source: HRMS Members. A verified-identity row is only ever
+        // written by the invite flow and the super-admin seeder, so a member
+        // who registered through the portal and was then approved in the ERP
+        // has none — Identity answers 404 and the claim stays absent. Auth
+        // documents "absent" as "not blocked", but Communication's
+        // ConversationPolicy reads it fail-closed and refuses every message
+        // with `vetting_pending`. That disagreement made member-to-member
+        // messaging impossible for every portal-origin member.
+        //
+        // Members is the authority on whether a portal person is a member at
+        // all, so ask it last and emit Active only for an Active member.
+        // Anything else leaves the claim absent, which keeps the chat gate
+        // closed rather than opening it by accident.
+        var membersBaseUrl = configuration["Hrms:MembersBaseUrl"];
+        if (!claims.Exists(c => c.Type == "vetting_status") && !string.IsNullOrEmpty(membersBaseUrl))
+        {
+            try
+            {
+                var member = await client.GetFromJsonAsync<MemberStatusResponse>(
+                    $"{membersBaseUrl}/api/members/internal/by-identity/{userId}", ct);
+
+                if (string.Equals(member?.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                    claims.Add(new Claim("vetting_status", "Active"));
+            }
+            catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                logger.LogDebug("No member row for user {UserId} (404)", userId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to fetch member status from HRMS Members for user {UserId}", userId);
             }
         }
 
