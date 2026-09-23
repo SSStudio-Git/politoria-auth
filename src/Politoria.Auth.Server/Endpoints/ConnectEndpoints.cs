@@ -180,6 +180,33 @@ public static class ConnectEndpoints
             var principal = result.Principal
                 ?? throw new InvalidOperationException("The refresh token is no longer valid.");
 
+            // Authorization state is re-read on every renewal, never inherited.
+            // The principal OpenIddict rebuilds carries the claims minted at
+            // login, so a role taken away or a membership revoked did not reach
+            // the token until the user signed in again — a deactivated member
+            // could keep messaging for as long as they kept refreshing. Drop
+            // the stale authorization claims and ask HRMS again.
+            if (principal.Identity is ClaimsIdentity refreshedIdentity)
+            {
+                var subject = principal.FindFirstValue(OpenIddictConstants.Claims.Subject);
+                if (Guid.TryParse(subject, out var refreshUserId))
+                {
+                    foreach (var stale in refreshedIdentity.FindAll(c =>
+                                 c.Type is "role" or "vetting_status" or "tenant_ids"
+                                     or "org_units" or "hrms_access" or "has_sensitive_access"
+                                     or "full_access").ToList())
+                    {
+                        refreshedIdentity.RemoveClaim(stale);
+                    }
+
+                    var enrichment = httpContext.RequestServices
+                        .GetRequiredService<IClaimsEnrichmentService>();
+                    var refreshed = await enrichment.GetEnrichedClaimsAsync(
+                        refreshUserId, httpContext.RequestAborted);
+                    refreshedIdentity.AddClaims(refreshed);
+                }
+            }
+
             foreach (var claim in principal.Claims)
             {
                 claim.SetDestinations(GetDestinations(claim, principal));
