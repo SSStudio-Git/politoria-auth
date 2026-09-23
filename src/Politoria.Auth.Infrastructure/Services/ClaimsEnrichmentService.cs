@@ -18,7 +18,7 @@ public class ClaimsEnrichmentService(
 {
     private record RolesResponse(string[] Roles, string? VettingStatus, Guid[]? TenantIds, string[]? Permissions);
     private record VettingStatusResponse(string VettingStatus);
-    private record MemberStatusResponse(string? Status);
+    private record MemberStatusResponse(string? Status, Guid? TenantId);
 
     public async Task<IReadOnlyList<Claim>> GetEnrichedClaimsAsync(Guid userId, CancellationToken ct = default)
     {
@@ -141,15 +141,30 @@ public class ClaimsEnrichmentService(
         // Anything else leaves the claim absent, which keeps the chat gate
         // closed rather than opening it by accident.
         var membersBaseUrl = configuration["Hrms:MembersBaseUrl"];
-        if (!claims.Exists(c => c.Type == "vetting_status") && !string.IsNullOrEmpty(membersBaseUrl))
+        var needsVetting = !claims.Exists(c => c.Type == "vetting_status");
+        var needsTenant = !claims.Exists(c => c.Type == "tenant_ids");
+        if ((needsVetting || needsTenant) && !string.IsNullOrEmpty(membersBaseUrl))
         {
             try
             {
                 var member = await client.GetFromJsonAsync<MemberStatusResponse>(
                     $"{membersBaseUrl}/api/members/internal/by-identity/{userId}", ct);
 
-                if (string.Equals(member?.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                if (needsVetting &&
+                    string.Equals(member?.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                {
                     claims.Add(new Claim("vetting_status", "Active"));
+                }
+
+                // Portal people have no IAM record, so IAM returns an empty
+                // tenant list and every tenant-scoped call refused them —
+                // opening a direct message came back `missing_tenant`. The
+                // Member row knows which tenant they belong to.
+                if (needsTenant &&
+                    member?.TenantId is { } memberTenant && memberTenant != Guid.Empty)
+                {
+                    claims.Add(new Claim("tenant_ids", memberTenant.ToString()));
+                }
             }
             catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
