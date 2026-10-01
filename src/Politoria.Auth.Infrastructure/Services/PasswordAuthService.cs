@@ -154,6 +154,19 @@ public class PasswordAuthService(
         // the VerifiedIdentity. Find-or-create: a fresh invite has no User row yet,
         // but be idempotent if the page is submitted twice or the id pre-exists.
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == identityId, ct);
+
+        // HRMS mints a NEW identity id on every invite claim, so the same email can
+        // be (re)invited under a different id. The email column is unique — inserting
+        // a second row for an email that already has an account would crash (23505).
+        // Fall back to the existing email owner: that row is the invitee's real
+        // account, and its Id is their canonical OIDC `sub`. This effectively turns a
+        // re-invite into an email-proven password (re)set + sign-in.
+        if (user is null && norm is not null)
+        {
+            user = await db.Users.FirstOrDefaultAsync(
+                u => u.Email != null && u.Email.ToLower() == norm, ct);
+        }
+
         if (user is null)
         {
             user = User.CreateWithId(identityId, displayName, norm);
@@ -161,12 +174,27 @@ public class PasswordAuthService(
         }
         else if (norm is not null && string.IsNullOrEmpty(user.Email))
         {
-            user.Update(email: norm);
+            // Only adopt the email if no other user already owns it (avoids the
+            // symmetric unique-index collision on the update path).
+            var emailTaken = await db.Users.AnyAsync(
+                u => u.Id != user.Id && u.Email != null && u.Email.ToLower() == norm, ct);
+            if (!emailTaken) user.Update(email: norm);
         }
 
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(newPassword));
         user.ResetFailedLogins();
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Last-resort guard: never surface an unhandled 500. The endpoint maps
+            // null to a clean 400 ("Could not set the password.").
+            logger.LogError(ex, "Failed to set password from invite for identity {IdentityId}", identityId);
+            return null;
+        }
 
         return new SignedInUser(user.Id, user.DisplayName, user.Email, user.Phone);
     }
