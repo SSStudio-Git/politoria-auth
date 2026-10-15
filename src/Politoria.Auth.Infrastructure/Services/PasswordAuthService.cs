@@ -32,6 +32,9 @@ public class PasswordAuthService(
     private static readonly TimeSpan ResendWindow = TimeSpan.FromMinutes(15);
 
     private string Brand => config["Branding:ProductName"] ?? "Pishro";
+    // All auth emails are English: auth knows no recipient locale, and one
+    // language for everyone was the party's call (2026-10-15).
+    private string SiteUrl => (config["Branding:SiteUrl"] ?? "https://pishro.party").TrimEnd('/');
     private string PublicUrl => (config["Auth:PublicUrl"] ?? "").TrimEnd('/');
 
     public async Task RegisterAsync(string email, string password, string displayName, CancellationToken ct)
@@ -42,9 +45,14 @@ public class PasswordAuthService(
         // does, send a heads-up (sign in / reset) rather than creating a second account.
         if (await db.Users.AnyAsync(u => u.Email != null && u.Email.ToLower() == norm, ct))
         {
+            var signIn = $"{SiteUrl}/api/auth/login";
             await PublishEmail(norm, $"You already have a {Brand} account",
-                $"<p>Someone tried to register a {Brand} account with this email, but one already exists.</p><p>If that was you, just sign in — or reset your password if you've forgotten it.</p>",
-                $"You already have a {Brand} account. Sign in, or reset your password.", ct);
+                AuthEmailMarkup.P("Hello,") +
+                AuthEmailMarkup.P($"Someone tried to create a {Brand} account with this email address, but an account already exists for it.") +
+                AuthEmailMarkup.P("If that was you, just sign in. If you've forgotten your password, choose \"Forgot your password?\" on the sign-in page.") +
+                AuthEmailMarkup.Button("Sign in", signIn) +
+                AuthEmailMarkup.Note("If this wasn't you, you can ignore this email. Your account is safe."),
+                $"You already have a {Brand} account. Sign in: {signIn}", ct);
             return;
         }
 
@@ -100,9 +108,14 @@ public class PasswordAuthService(
         db.EmailOtpTokens.Add(EmailOtpToken.Create(userId, email, code, OtpTtl));
         await db.SaveChangesAsync(ct);
 
-        await PublishEmail(email, $"Your {Brand} sign-in code",
-            $"<p>Your {Brand} sign-in code is <strong>{code}</strong>.</p><p>It expires in 5 minutes. If you didn't try to sign in, you can ignore this email.</p>",
-            $"Your {Brand} sign-in code is {code}. It expires in 5 minutes.", ct);
+        var minutes = (int)OtpTtl.TotalMinutes;
+        await PublishEmail(email, $"Your {Brand} sign-in code: {code}",
+            AuthEmailMarkup.P("Hello,") +
+            AuthEmailMarkup.P($"Here is your {Brand} sign-in code:") +
+            AuthEmailMarkup.Code(code) +
+            AuthEmailMarkup.P($"It expires in {minutes} minutes. Never share it with anyone.") +
+            AuthEmailMarkup.Note("If you didn't try to sign in, you can ignore this email."),
+            $"Your {Brand} sign-in code is {code}. It expires in {minutes} minutes.", ct);
     }
 
     public async Task<SignedInUser?> VerifyOtpAsync(string email, string code, CancellationToken ct)
@@ -204,13 +217,18 @@ public class PasswordAuthService(
         var norm = email.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == norm, ct);
         if (user is null || string.IsNullOrEmpty(user.Email)) return; // silent (no enumeration)
-        await IssueAndEmail(user.Id, user.Email, ResetTtl, $"Reset your {Brand} password", "reset", ct);
+        await IssueAndEmail(user.Id, user.Email, ResetTtl, $"Reset your {Brand} password",
+            "We received a request to reset your password. Use the button below to choose a new one. The link is valid for one hour.",
+            "Choose a new password", ct);
     }
 
     public Task IssueSetupInviteAsync(Guid userId, string email, CancellationToken ct) =>
-        IssueAndEmail(userId, email, InviteTtl, $"Set your {Brand} password", "set up", ct);
+        IssueAndEmail(userId, email, InviteTtl, $"Set your {Brand} password",
+            "Use the button below to set your password and activate your account. The link is valid for three days.",
+            "Set your password", ct);
 
-    private async Task IssueAndEmail(Guid userId, string email, TimeSpan ttl, string subject, string verb, CancellationToken ct)
+    private async Task IssueAndEmail(Guid userId, string email, TimeSpan ttl,
+        string subject, string lead, string cta, CancellationToken ct)
     {
         var token = Base64Url(RandomNumberGenerator.GetBytes(32));
         db.PasswordSetupTokens.Add(PasswordSetupToken.Create(userId, token, ttl));
@@ -218,8 +236,12 @@ public class PasswordAuthService(
 
         var link = $"{PublicUrl}/set-password.html?token={token}";
         await PublishEmail(email, subject,
-            $"<p>Use the link below to {verb} your {Brand} password:</p><p><a href=\"{link}\">{link}</a></p><p>If you didn't request this, you can ignore this email.</p>",
-            $"To {verb} your {Brand} password, open: {link}", ct);
+            AuthEmailMarkup.P("Hello,") +
+            AuthEmailMarkup.P(lead) +
+            AuthEmailMarkup.Button(cta, link) +
+            AuthEmailMarkup.FallbackLink(link) +
+            AuthEmailMarkup.Note("If you didn't ask for this, you can ignore this email. Your password won't change."),
+            $"{lead}\n\n{link}", ct);
     }
 
     private async Task PublishEmail(string to, string subject, string html, string text, CancellationToken ct)
