@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: pishro_auth
       POSTGRES_USER: auth
-      POSTGRES_PASSWORD: auth_dev_password
+      POSTGRES_PASSWORD: "${AUTH_DB_POSTGRES_PASSWORD}"
     volumes:
       - auth_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,11 +22,47 @@ services:
       auth-db:
         condition: service_healthy
     environment:
-      ConnectionStrings__AuthDb: "Host=auth-db;Port=5432;Database=pishro_auth;Username=auth;Password=auth_dev_password"
+      ConnectionStrings__AuthDb: "Host=auth-db;Port=5432;Database=pishro_auth;Username=auth;Password=${AUTH_SERVER_CONNECTIONSTRINGS_AUTHDB_PASSWORD}"
+      Branding__ProductName: "Pishro Party"
+      # Absolute base for links in auth emails (set-password / reset / OTP).
+      # Without it the reset link renders relative (/set-password.html) and the
+      # mail client turns it into http://set-password.html/… which 404s.
+      Auth__PublicUrl: "https://auth.pishro.party"
+      # The portal and the public site are one app now, served on
+      # web-stage while the apex still runs the old WordPress site.
+      # ClientSeeder UNIONS these onto the hardcoded portal.* URIs on every
+      # startup, so both hosts stay valid and rollback needs no auth change.
+      Oidc__Portal__RedirectUris__0: "https://web-stage.pishro.party/api/auth/callback"
+      Oidc__Portal__RedirectUris__1: "https://pishro.party/api/auth/callback"
+      Oidc__Portal__PostLogoutUris__0: "https://web-stage.pishro.party/"
+      Oidc__Portal__PostLogoutUris__1: "https://pishro.party/"
       Fido2__ServerDomain: "auth.pishro.party"
       Fido2__Origins__0: "https://auth.pishro.party"
+      Hrms__IamBaseUrl: "http://hrms-iam:8080"
+      Hrms__IdentityBaseUrl: "http://hrms-identity:8080"
+      Hrms__MembersBaseUrl: "http://hrms-members:8080"
+      Hrms__OrganizationBaseUrl: "http://hrms-organization:8080"
+      InviteHandoff__SharedSecret: "${AUTH_SERVER_INVITEHANDOFF_SHAREDSECRET}"
+      RabbitMq__Host: "hrms-rabbitmq-1"
+      RabbitMq__Username: "hrms"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+      RabbitMq__Port: "5672"
+      Admin__Key: ${ADMIN_KEY:-}
+    volumes:
+      - auth_dp_keys:/root/.aspnet/DataProtection-Keys
+      - auth_certs:/root/.dotnet/corefx/cryptography/x509stores
     ports:
       - "127.0.0.1:5300:8080"
+    networks:
+      - default
+      - hrms-network
 
 volumes:
   auth_pgdata:
+  auth_dp_keys:
+  auth_certs:
+
+networks:
+  hrms-network:
+    external: true
+    name: hrms-network

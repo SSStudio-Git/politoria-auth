@@ -1,0 +1,19 @@
+{
+  "shared": [
+    "Directory.Build.props",
+    "Directory.Packages.props",
+    "global.json",
+    "NuGet.config"
+  ],
+  "services": [
+    {
+      "service": "auth-server",
+      "kind": "dotnet",
+      "context": "politoria-auth/src",
+      "dockerfile": "politoria-auth/src/Politoria.Auth.Server/Dockerfile",
+      "paths": [
+        "src/"
+      ]
+    }
+  ]
+}

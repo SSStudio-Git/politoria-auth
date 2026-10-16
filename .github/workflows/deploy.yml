@@ -1,0 +1,114 @@
+# Push to main = deploy to prod. Same pipeline as politoria-hrms
+# (.github/workflows/deploy.yml there; server side in hrms/ops/):
+#   test -> plan (which services changed) -> build images on GitHub -> deploy
+# The prod box only pulls and starts images, smoke-checks, and rolls back by
+# itself on failure.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services: empty = from the diff, "all", or a list'
+        default: ""
+      deploy:
+        description: Deploy after building
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-auth
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/ssstudio-git
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      services: ${{ steps.plan.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: plan
+        run: |
+          requested="${{ github.event.inputs.services }}"
+          [ "${{ github.event_name }}" = repository_dispatch ] && requested=all
+          python3 .github/scripts/plan-services.py .github/services.json "$requested" \
+            "${{ github.event.before }}" "${{ github.sha }}"
+
+  test:
+    needs: plan
+    if: needs.plan.outputs.services != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: politoria-auth }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - name: Build
+        run: dotnet build politoria-auth/src/Politoria.Auth.Server/Politoria.Auth.Server.csproj -nologo -v q
+
+  build:
+    needs: [plan, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: politoria-auth }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build args
+        id: args
+        run: |
+          {
+            echo "args<<EOF"
+            echo '${{ toJson(matrix.args) }}' | python3 -c 'import json,sys; d=json.load(sys.stdin) or {}; [print(f"{k}={v}") for k,v in d.items()]'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ matrix.service }}:main
+          build-args: ${{ steps.args.outputs.args }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: [plan, build]
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - name: Deploy on prod (pull, start, smoke, roll back on failure)
+        env:
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
+          HOST: ${{ vars.PROD_HOST || '159.195.76.212' }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          echo "${{ secrets.GITHUB_TOKEN }}" | ssh -i ~/.ssh/id_deploy -o BatchMode=yes root@"$HOST" \
+            deploy auth ${{ github.sha }} ${{ needs.plan.outputs.services }}
