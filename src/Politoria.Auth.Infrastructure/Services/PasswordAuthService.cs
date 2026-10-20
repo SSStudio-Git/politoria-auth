@@ -156,12 +156,13 @@ public class PasswordAuthService(
         return true;
     }
 
-    public async Task<SignedInUser?> SetPasswordFromInviteAsync(
+    public async Task<InviteSetPasswordResult> SetPasswordFromInviteAsync(
         Guid identityId, string displayName, string? email, string newPassword, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8) return null;
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+            return new(InviteSetPasswordOutcome.Failed);
 
-        var norm = string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+        var norm = InviteAccountGuard.Normalize(email);
 
         // Bind the pishro-auth User to the HRMS identity id so OIDC `sub` matches
         // the VerifiedIdentity. Find-or-create: a fresh invite has no User row yet,
@@ -169,15 +170,17 @@ public class PasswordAuthService(
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == identityId, ct);
 
         // HRMS mints a NEW identity id on every invite claim, so the same email can
-        // be (re)invited under a different id. The email column is unique — inserting
-        // a second row for an email that already has an account would crash (23505).
-        // Fall back to the existing email owner: that row is the invitee's real
-        // account, and its Id is their canonical OIDC `sub`. This effectively turns a
-        // re-invite into an email-proven password (re)set + sign-in.
-        if (user is null && norm is not null)
+        // be (re)invited under a different id. The email column is unique, so
+        // inserting a second row would crash (23505) — the June fix fell back to the
+        // existing email owner here, but that silently overwrote a real account's
+        // password from nothing more than an invite link. Refuse instead: the person
+        // already has an account and signs in normally.
+        if (user is null && norm is not null && await EmailOwnedByOtherUserAsync(identityId, norm, ct))
         {
-            user = await db.Users.FirstOrDefaultAsync(
-                u => u.Email != null && u.Email.ToLower() == norm, ct);
+            logger.LogWarning(
+                "Invite set-password refused for identity {IdentityId}: email already belongs to another account",
+                identityId);
+            return new(InviteSetPasswordOutcome.ExistingAccount);
         }
 
         if (user is null)
@@ -189,9 +192,7 @@ public class PasswordAuthService(
         {
             // Only adopt the email if no other user already owns it (avoids the
             // symmetric unique-index collision on the update path).
-            var emailTaken = await db.Users.AnyAsync(
-                u => u.Id != user.Id && u.Email != null && u.Email.ToLower() == norm, ct);
-            if (!emailTaken) user.Update(email: norm);
+            if (!await EmailOwnedByOtherUserAsync(user.Id, norm, ct)) user.Update(email: norm);
         }
 
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(newPassword));
@@ -203,14 +204,21 @@ public class PasswordAuthService(
         }
         catch (DbUpdateException ex)
         {
-            // Last-resort guard: never surface an unhandled 500. The endpoint maps
-            // null to a clean 400 ("Could not set the password.").
+            // Last-resort guard: never surface an unhandled 500. A concurrent insert
+            // of the same email lands here as a unique-index violation — report it as
+            // the existing-account case; anything else maps to a clean 400.
             logger.LogError(ex, "Failed to set password from invite for identity {IdentityId}", identityId);
-            return null;
+            db.ChangeTracker.Clear();
+            return norm is not null && await EmailOwnedByOtherUserAsync(identityId, norm, ct)
+                ? new(InviteSetPasswordOutcome.ExistingAccount)
+                : new(InviteSetPasswordOutcome.Failed);
         }
 
-        return new SignedInUser(user.Id, user.DisplayName, user.Email, user.Phone);
+        return new(InviteSetPasswordOutcome.Ok, new SignedInUser(user.Id, user.DisplayName, user.Email, user.Phone));
     }
+
+    private Task<bool> EmailOwnedByOtherUserAsync(Guid userId, string normalizedEmail, CancellationToken ct) =>
+        db.Users.AnyAsync(u => u.Id != userId && u.Email != null && u.Email.ToLower() == normalizedEmail, ct);
 
     public async Task RequestResetAsync(string email, CancellationToken ct)
     {

@@ -30,9 +30,10 @@ public interface IPasswordAuthService
 
     /// <summary>HRMS invite handoff: create-or-bind the User to the handoff's identity
     /// id, set its password (no OTP — the signed handoff is the proof of invite), and
-    /// return the user to sign in. Mirrors the passkey-invite path. Null on a weak
-    /// password.</summary>
-    Task<SignedInUser?> SetPasswordFromInviteAsync(
+    /// return the user to sign in. Mirrors the passkey-invite path. Refuses with
+    /// <see cref="InviteSetPasswordOutcome.ExistingAccount"/> when the email already
+    /// belongs to a different account — an invite never touches that account.</summary>
+    Task<InviteSetPasswordResult> SetPasswordFromInviteAsync(
         Guid identityId, string displayName, string? email, string newPassword, CancellationToken ct);
 
     /// <summary>Forgot-password: always succeeds; emails a reset link if the user exists.</summary>
@@ -43,3 +44,8 @@ public interface IPasswordAuthService
 }
 
 public record SignedInUser(Guid UserId, string? DisplayName, string? Email, string? Phone);
+
+public enum InviteSetPasswordOutcome { Ok, Failed, ExistingAccount }
+
+/// <summary><see cref="User"/> is set only when <see cref="Outcome"/> is Ok.</summary>
+public record InviteSetPasswordResult(InviteSetPasswordOutcome Outcome, SignedInUser? User = null);

@@ -103,9 +103,11 @@ public static class PasswordAuthEndpoints
             if (handoff is null)
                 return Results.BadRequest(new { error = "Invalid or expired invitation link." });
 
-            var user = await svc.SetPasswordFromInviteAsync(
+            var result = await svc.SetPasswordFromInviteAsync(
                 handoff.IdentityId, handoff.DisplayName, handoff.Email, newPassword, ct);
-            if (user is null)
+            if (result.Outcome == InviteSetPasswordOutcome.ExistingAccount)
+                return AuthEndpoints.ExistingAccountConflict();
+            if (result.User is not { } user)
                 return Results.BadRequest(new { error = "Could not set the password." });
 
             var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone);

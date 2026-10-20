@@ -35,6 +35,8 @@ public static class AuthEndpoints
             CancellationToken ct) =>
         {
             var result = await passkeyService.CompleteRegisterAsync(body, ct);
+            if (result.Error == InviteAccountGuard.ExistingAccountError)
+                return ExistingAccountConflict();
             if (!result.Success)
                 return Results.BadRequest(new { error = result.Error });
 
@@ -83,7 +85,14 @@ public static class AuthEndpoints
             if (handoff is null)
                 return Results.BadRequest(new { error = "Invalid or expired handoff" });
 
-            var result = await passkeyService.BeginRegisterAsync(handoff.DisplayName, handoff.IdentityId, ct);
+            // The handoff email already belongs to another account (HRMS minted a
+            // new identity id for an existing person): refuse rather than create a
+            // second, email-less user next to it.
+            if (await passkeyService.InviteEmailBelongsToOtherUserAsync(handoff.IdentityId, handoff.Email, ct))
+                return ExistingAccountConflict();
+
+            var result = await passkeyService.BeginRegisterAsync(
+                handoff.DisplayName, handoff.IdentityId, handoff.Email, ct);
             return Results.Ok(result);
         });
 
@@ -113,6 +122,11 @@ public static class AuthEndpoints
             return Results.Ok(new { success = true, userId = result.UserId });
         });
     }
+
+    internal static IResult ExistingAccountConflict() =>
+        Results.Json(
+            new { error = InviteAccountGuard.ExistingAccountError, message = InviteAccountGuard.ExistingAccountMessage },
+            statusCode: StatusCodes.Status409Conflict);
 
     internal static List<Claim> BuildClaims(Guid userId, string? displayName, string? email, string? phone)
     {

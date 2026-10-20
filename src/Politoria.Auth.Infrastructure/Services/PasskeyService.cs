@@ -19,7 +19,8 @@ public class PasskeyService(
     private const string RegisterPrefix = "fido2:reg:";
     private const string LoginPrefix = "fido2:login:";
 
-    public async Task<object> BeginRegisterAsync(string displayName, Guid? userId = null, CancellationToken ct = default)
+    public async Task<object> BeginRegisterAsync(
+        string displayName, Guid? userId = null, string? inviteEmail = null, CancellationToken ct = default)
     {
         var effectiveUserId = userId ?? Guid.NewGuid();
         var userHandle = effectiveUserId.ToByteArray();
@@ -54,7 +55,11 @@ public class PasskeyService(
         var challengeId = Guid.NewGuid().ToString();
         var optionsJson = options.ToJson();
 
-        var payload = JsonSerializer.Serialize(new { optionsJson, userId = effectiveUserId, displayName });
+        var payload = JsonSerializer.Serialize(new
+        {
+            optionsJson, userId = effectiveUserId, displayName,
+            inviteEmail = InviteAccountGuard.Normalize(inviteEmail)
+        });
         await cache.SetStringAsync(
             RegisterPrefix + challengeId,
             payload,
@@ -82,6 +87,16 @@ public class PasskeyService(
         var optionsJson = payloadDoc.RootElement.GetProperty("optionsJson").GetString()!;
         var userId = payloadDoc.RootElement.GetProperty("userId").GetGuid();
         var displayName = payloadDoc.RootElement.GetProperty("displayName").GetString()!;
+        var inviteEmail = payloadDoc.RootElement.TryGetProperty("inviteEmail", out var ie)
+            && ie.ValueKind == JsonValueKind.String ? ie.GetString() : null;
+
+        // Defensive re-check of the invite begin guard: the email may have been
+        // claimed by another account between begin and complete.
+        if (await InviteEmailBelongsToOtherUserAsync(userId, inviteEmail, ct))
+        {
+            await cache.RemoveAsync(RegisterPrefix + challengeId, ct);
+            return new AuthResult(false, null, InviteAccountGuard.ExistingAccountError);
+        }
 
         var options = CredentialCreateOptions.FromJson(optionsJson);
 
@@ -145,6 +160,14 @@ public class PasskeyService(
         {
             return new AuthResult(false, null, $"Attestation verification failed: {ex.Message}");
         }
+    }
+
+    public async Task<bool> InviteEmailBelongsToOtherUserAsync(Guid userId, string? email, CancellationToken ct = default)
+    {
+        var norm = InviteAccountGuard.Normalize(email);
+        if (norm is null) return false;
+        return await db.Users.AnyAsync(
+            u => u.Id != userId && u.Email != null && u.Email.ToLower() == norm, ct);
     }
 
     public async Task<object> BeginLoginAsync(CancellationToken ct)

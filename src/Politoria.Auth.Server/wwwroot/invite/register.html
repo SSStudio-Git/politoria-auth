@@ -72,6 +72,7 @@
             font-size: 0.85rem;
             display: none;
         }
+        .error a { color: #fafafa; font-weight: 600; margin-inline-start: 0.35rem; }
         .spinner {
             display: none;
             width: 18px;
@@ -86,8 +87,8 @@
 </head>
 <body>
     <div class="card">
-        <h1>Register Your Passkey</h1>
-        <p>You've been invited to HRMS. Register a passkey to activate your account.</p>
+        <h1 id="title">Register Your Passkey</h1>
+        <p id="subtitle">You've been invited to HRMS. Register a passkey to activate your account.</p>
         <div class="error" id="error"></div>
         <div class="success" id="success"></div>
         <button class="btn btn-primary" id="registerBtn" onclick="startRegister()">
@@ -100,13 +101,53 @@
     <script>
         const { startRegistration } = SimpleWebAuthnBrowser;
 
+        // i18n — same pattern as invite/set-password.html.
+        const I18N = {
+            en: { title: 'Register Your Passkey', subtitle: "You've been invited to HRMS. Register a passkey to activate your account.",
+                  btn: 'Register passkey', btnBusy: 'Registering...', ok: 'Passkey registered. Redirecting...',
+                  missing: 'Missing handoff token. Please go back to HRMS and try again.',
+                  cancelled: 'Registration was cancelled.',
+                  existing: 'You already have an account with this email. Sign in instead.', signIn: 'Sign in' },
+            fa: { title: 'کلید عبور خود را ثبت کنید', subtitle: 'شما دعوت شده‌اید. برای فعال‌سازی حساب، یک کلید عبور ثبت کنید.',
+                  btn: 'ثبت کلید عبور', btnBusy: 'در حال ثبت…', ok: 'کلید عبور ثبت شد. در حال انتقال…',
+                  missing: 'پیوند دعوت یافت نشد. لطفاً از پیوند موجود در دعوت‌نامه استفاده کنید.',
+                  cancelled: 'ثبت لغو شد.',
+                  existing: 'شما با این ایمیل از قبل حساب دارید. به‌جای آن وارد شوید.', signIn: 'ورود' },
+        };
+
         const params = new URLSearchParams(window.location.search);
         const handoff = params.get('handoff');
         const returnUrl = params.get('returnUrl') || '/';
+        const lang = (params.get('lang') || document.documentElement.lang || 'en').slice(0, 2);
+        const t = I18N[lang] || I18N.en;
+
+        if (lang === 'fa') { document.documentElement.lang = 'fa'; document.documentElement.dir = 'rtl'; }
+
+        for (const [id, key] of [['title','title'],['subtitle','subtitle'],['btnText','btn']]) {
+            const el = document.getElementById(id); if (el) el.textContent = t[key];
+        }
 
         if (!handoff) {
-            showError('Missing handoff token. Please go back to HRMS and try again.');
+            showError(t.missing);
             document.getElementById('registerBtn').disabled = true;
+        }
+
+        // Raised by begin/complete when the server answers 409 existing_account.
+        class ExistingAccountError extends Error {}
+
+        // The invite's email already has an account: no passkey or user was created.
+        // Point the person at the normal sign-in (returnUrl = the portal's /api/auth/login).
+        function showExistingAccount() {
+            const el = document.getElementById('error');
+            el.textContent = t.existing;
+            if (/^(https?:\/\/|\/(?!\/))/i.test(returnUrl)) {
+                const a = document.createElement('a');
+                a.href = returnUrl; a.textContent = t.signIn;
+                el.append(' ', a);
+            }
+            el.style.display = 'block';
+            document.getElementById('success').style.display = 'none';
+            document.getElementById('registerBtn').style.display = 'none';
         }
 
         function showError(msg) {
@@ -127,7 +168,7 @@
             const btn = document.getElementById('registerBtn');
             btn.disabled = loading;
             document.getElementById('spinner').style.display = loading ? 'inline-block' : 'none';
-            document.getElementById('btnText').textContent = loading ? 'Registering...' : 'Register passkey';
+            document.getElementById('btnText').textContent = loading ? t.btnBusy : t.btn;
         }
 
         async function startRegister() {
@@ -140,7 +181,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ handoff })
                 });
-                const beginData = await beginRes.json();
+                const beginData = await beginRes.json().catch(() => ({}));
+                if (beginRes.status === 409 && beginData.error === 'existing_account') throw new ExistingAccountError();
                 if (!beginRes.ok) throw new Error(beginData.error || 'Failed to begin registration');
 
                 const attestationResponse = await startRegistration({ optionsJSON: beginData.options });
@@ -153,14 +195,19 @@
                         attestationResponse
                     })
                 });
-                const completeData = await completeRes.json();
+                const completeData = await completeRes.json().catch(() => ({}));
+                if (completeRes.status === 409 && completeData.error === 'existing_account') throw new ExistingAccountError();
                 if (!completeRes.ok) throw new Error(completeData.error || 'Registration failed');
 
-                showSuccess('Passkey registered. Redirecting...');
+                showSuccess(t.ok);
                 setTimeout(() => { window.location.href = returnUrl; }, 600);
             } catch (err) {
+                if (err instanceof ExistingAccountError) {
+                    showExistingAccount();
+                    return;
+                }
                 if (err.name === 'NotAllowedError') {
-                    showError('Registration was cancelled.');
+                    showError(t.cancelled);
                 } else {
                     showError(err.message || 'An unexpected error occurred.');
                 }
