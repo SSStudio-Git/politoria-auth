@@ -133,6 +133,8 @@ builder.Services.AddScoped<IInviteHandoffService, InviteHandoffService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddHttpClient("hrms-internal");
 builder.Services.AddScoped<ClientSeeder>();
+builder.Services.AddScoped<Politoria.Auth.Server.Endpoints.SignInRecorder>();
+builder.Services.AddHostedService<Politoria.Auth.Server.Endpoints.SignInBackfill>();
 
 // req/004 — publish-only message bus so auth emails (OTP / set-password / reset)
 // are delivered by Hrms.Communication (Resend) via the SendEmail command.

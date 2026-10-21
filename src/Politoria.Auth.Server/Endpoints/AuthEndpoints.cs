@@ -45,7 +45,7 @@ public static class AuthEndpoints
             if (user is null)
                 return Results.BadRequest(new { error = "User not found after registration" });
 
-            var claims = BuildClaims(user.Id, user.DisplayName, user.Email, user.Phone);
+            var claims = BuildClaims(user.Id, user.DisplayName, user.Email, user.Phone, LoginMethods.Passkey);
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
@@ -111,7 +111,7 @@ public static class AuthEndpoints
             if (user is null)
                 return Results.BadRequest(new { error = "User not found" });
 
-            var claims = BuildClaims(user.Id, user.DisplayName, user.Email, user.Phone);
+            var claims = BuildClaims(user.Id, user.DisplayName, user.Email, user.Phone, LoginMethods.Passkey);
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
@@ -128,7 +128,8 @@ public static class AuthEndpoints
             new { error = InviteAccountGuard.ExistingAccountError, message = InviteAccountGuard.ExistingAccountMessage },
             statusCode: StatusCodes.Status409Conflict);
 
-    internal static List<Claim> BuildClaims(Guid userId, string? displayName, string? email, string? phone)
+    internal static List<Claim> BuildClaims(
+        Guid userId, string? displayName, string? email, string? phone, string method)
     {
         var claims = new List<Claim>
         {
@@ -142,6 +143,10 @@ public static class AuthEndpoints
             claims.Add(new Claim(ClaimTypes.Email, email));
         if (!string.IsNullOrEmpty(phone))
             claims.Add(new Claim("phone_number", phone));
+
+        // How this browser session was opened. Carried into the authorization
+        // code by HandleAuthorize so the sign-in record says passkey or password.
+        claims.Add(new Claim(LoginMethods.ClaimType, method));
 
         return claims;
     }

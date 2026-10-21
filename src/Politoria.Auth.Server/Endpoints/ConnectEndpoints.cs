@@ -99,6 +99,17 @@ public static class ConnectEndpoints
         if (!string.IsNullOrEmpty(user.AvatarUrl))
             claims.Add(new Claim(OpenIddictConstants.Claims.Picture, user.AvatarUrl));
 
+        // Sign-in record inputs. Neither has a destination, so they ride inside
+        // the authorization code to HandleToken and never reach a token. The
+        // device is read here because the code exchange is a server-to-server
+        // call that carries the client's user agent, not the person's.
+        var method = cookieResult.Principal.FindFirstValue(LoginMethods.ClaimType);
+        if (!string.IsNullOrEmpty(method))
+            claims.Add(new Claim(SignInRecorder.MethodClaim, method));
+        var device = SignInRecorder.DeviceOf(httpContext.Request.Headers.UserAgent.ToString());
+        if (device is not null)
+            claims.Add(new Claim(SignInRecorder.DeviceClaim, device));
+
         // Enrich with HRMS roles/vetting_status when those scopes are requested
         if (request.HasScope(RolesScope) || request.HasScope(VettingStatusScope))
         {
@@ -140,6 +151,11 @@ public static class ConnectEndpoints
             {
                 claim.SetDestinations(GetDestinations(claim, principal));
             }
+
+            // A code is redeemed once, so this is one record per session opened
+            // in a client — refreshes below are deliberately not sign-ins.
+            await httpContext.RequestServices.GetRequiredService<SignInRecorder>()
+                .RecordAsync(principal, request.ClientId, httpContext.RequestAborted);
 
             return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }

@@ -77,7 +77,7 @@ public static class PasswordAuthEndpoints
             if (user is null)
                 return Results.Json(new { error = "Invalid or expired code." }, statusCode: StatusCodes.Status401Unauthorized);
 
-            var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone);
+            var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone, LoginMethods.Password);
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
             await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
             return Results.Ok(new { success = true, userId = user.UserId });
@@ -110,7 +110,7 @@ public static class PasswordAuthEndpoints
             if (result.User is not { } user)
                 return Results.BadRequest(new { error = "Could not set the password." });
 
-            var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone);
+            var claims = AuthEndpoints.BuildClaims(user.UserId, user.DisplayName, user.Email, user.Phone, LoginMethods.Password);
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
             await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
             return Results.Ok(new { success = true, userId = user.UserId });
